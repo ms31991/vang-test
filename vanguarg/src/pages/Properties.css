@@ -1,0 +1,36 @@
+.section h1 {
+  margin: 0;
+  font-size: 40px;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.listing-switch {
+  display: inline-flex;
+  gap: 4px;
+  margin: 4px 0 28px;
+  padding: 4px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+}
+
+.listing-switch a {
+  min-width: 108px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  color: var(--muted);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+}
+
+.listing-switch a.is-on {
+  background: var(--accent);
+  color: #fff;
+}
+
+.properties-empty {
+  margin: 8px 0 24px;
+  color: var(--muted);
+}

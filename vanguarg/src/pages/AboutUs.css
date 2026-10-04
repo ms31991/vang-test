@@ -1,0 +1,23 @@
+.about {
+  max-width: 720px;
+}
+
+.about h1 {
+  margin: 0 0 12px;
+  font-size: 40px;
+  letter-spacing: -0.04em;
+  color: var(--ink);
+}
+
+.about p,
+.about li {
+  color: var(--muted);
+}
+
+.about ul {
+  padding-left: 18px;
+}
+
+.about li + li {
+  margin-top: 8px;
+}

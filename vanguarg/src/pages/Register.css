@@ -1,0 +1,18 @@
+.auth-page {
+  display: grid;
+  place-items: center;
+  padding: 48px 16px 32px;
+}
+
+.auth-page .cl-footerItem,
+.auth-page .cl-footerPages,
+.auth-page .cl-badge,
+.auth-page [data-localization-key="badge__developmentMode"] {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .auth-page {
+    padding-bottom: 120px;
+  }
+}

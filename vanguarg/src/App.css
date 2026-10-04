@@ -1,0 +1,113 @@
+.app {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+}
+
+main {
+  flex: 1;
+}
+
+.section {
+  width: min(1120px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 40px 0 16px;
+}
+
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.section-head h2 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 28px;
+}
+
+.section-head a,
+.section-head p {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.property-category + .property-category {
+  margin-top: 40px;
+}
+
+.property-category {
+  scroll-margin-top: 112px;
+}
+
+.property-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.home-carousel {
+  --home-card-width: 300px;
+  width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  cursor: grab;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
+.home-carousel:active {
+  cursor: grabbing;
+}
+
+.home-carousel::-webkit-scrollbar {
+  display: none;
+}
+
+.home-carousel-track {
+  display: flex;
+  gap: 20px;
+  width: max-content;
+  will-change: transform;
+}
+
+.home-carousel-track.sliding {
+  animation: homeCarouselSlide 0.7s ease forwards;
+}
+
+.home-carousel-item {
+  flex: 0 0 var(--home-card-width);
+  width: var(--home-card-width);
+  min-width: var(--home-card-width);
+  user-select: none;
+}
+
+.home-carousel-item .property-card {
+  width: 100%;
+  height: 100%;
+}
+
+@keyframes homeCarouselSlide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(calc(-1 * var(--home-card-width) - 20px));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel-track.sliding {
+    animation: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .property-grid {
+    grid-template-columns: 1fr;
+  }
+}

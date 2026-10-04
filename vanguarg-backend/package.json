@@ -1,0 +1,21 @@
+{
+  "name": "vanguarg-backend",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "@clerk/express": "^2.1.73",
+    "cors": "^2.8.5",
+    "dotenv": "^18.0.4",
+    "express": "^5.1.0",
+    "imapflow": "^2.2.1",
+    "msnodesqlv8": "^5.5.0",
+    "mssql": "^12.7.2",
+    "multer": "^2.4.0",
+    "nodemailer": "^10.0.13"
+  }
+}

@@ -1,0 +1,48 @@
+:root {
+  --ink: #14221c;
+  --muted: #5c6b63;
+  --bg: #f6f4f0;
+  --line: #e4dfd6;
+  --accent: #1f6b4a;
+  --accent-dark: #164f36;
+  font: 16px/1.5 system-ui, "Segoe UI", Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+}
+
+#root {
+  min-height: 100svh;
+}
+
+#suche,
+#leistungen,
+#kontakt,
+#verkauf,
+#miete,
+#vanguard-seo,
+.home-seo-trades li {
+  scroll-margin-top: 112px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+}

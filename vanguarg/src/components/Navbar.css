@@ -1,0 +1,225 @@
+.navbar {
+  width: 100%;
+  height: 96px;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background: linear-gradient(135deg, rgba(10, 22, 16, 0.97), rgba(20, 40, 30, 0.97));
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+}
+
+.navbar-inner {
+  height: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  padding: 0 28px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.navbar-logo {
+  color: #fff;
+  text-decoration: none;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.navbar-links a {
+  color: rgba(255, 255, 255, 0.78);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  padding: 10px 12px;
+  border-radius: 10px;
+}
+
+.navbar-links a.active,
+.navbar-links a:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.navbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.login-link,
+.register-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 10px;
+}
+
+.login-link {
+  padding: 10px 15px;
+  color: rgba(255, 255, 255, 0.8);
+  border: 0;
+  background: none;
+  cursor: pointer;
+  font: inherit;
+}
+
+.login-link:hover,
+.login-link.active {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.register-link {
+  padding: 11px 18px;
+  color: #fff;
+  background: linear-gradient(135deg, #2f8a60, #1f6b4a);
+  box-shadow: 0 8px 20px rgba(31, 107, 74, 0.35);
+}
+
+.register-link:hover {
+  transform: translateY(-2px);
+}
+
+.mobile-bottom-nav {
+  display: none;
+}
+
+.mobile-lang {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .mobile-lang {
+    display: flex;
+    justify-content: flex-end;
+    position: fixed;
+    top: 14px;
+    right: 14px;
+    z-index: 1200;
+  }
+  #root {
+    padding-bottom: calc(108px + env(safe-area-inset-bottom));
+  }
+
+  .mobile-bottom-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: fixed;
+    left: 50%;
+    bottom: calc(14px + env(safe-area-inset-bottom));
+    transform: translateX(-50%);
+    width: calc(100% - 28px);
+    max-width: 430px;
+    height: 74px;
+    padding: 0 18px;
+    z-index: 1100;
+    border-radius: 999px;
+    background: rgba(245, 236, 214, 0.78);
+    backdrop-filter: blur(18px);
+    box-shadow:
+      0 16px 40px rgba(28, 25, 23, 0.18),
+      0 2px 8px rgba(28, 25, 23, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.45);
+    transition:
+      opacity 0.18s ease,
+      transform 0.18s ease,
+      visibility 0.18s ease;
+  }
+
+  .mobile-bottom-nav--hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transform: translateX(-50%) translateY(calc(100% + 32px));
+  }
+
+  .mobile-nav-item {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    text-decoration: none;
+    color: #111;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+    border: 0;
+    background: none;
+    cursor: pointer;
+    font-family: inherit;
+    padding: 0;
+  }
+
+  .mobile-nav-item.active {
+    color: #000;
+  }
+
+  .mobile-nav-item.active .mobile-nav-icon {
+    fill: #111;
+    stroke: #111;
+  }
+
+  .mobile-nav-icon {
+    width: 22px;
+    height: 22px;
+    display: block;
+  }
+
+  .mobile-nav-center {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 4px;
+    text-decoration: none;
+  }
+
+  .mobile-nav-center-btn {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: #111;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+  }
+
+  .mobile-nav-center-btn svg {
+    width: 22px;
+    height: 22px;
+  }
+}
+
+@media (max-width: 480px) {
+  .mobile-bottom-nav {
+    height: 70px;
+    padding: 0 12px;
+  }
+
+  .mobile-nav-item {
+    font-size: 10px;
+  }
+
+  .mobile-nav-center-btn {
+    width: 48px;
+    height: 48px;
+  }
+}

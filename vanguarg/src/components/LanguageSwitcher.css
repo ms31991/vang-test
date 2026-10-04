@@ -1,0 +1,31 @@
+.lang-switch {
+  display: inline-flex;
+  padding: 3px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.lang-switch button {
+  border: 0;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.75);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+
+.lang-switch button[aria-pressed="true"] {
+  background: #fff;
+  color: #14221c;
+}
+
+.mobile-lang .lang-switch {
+  background: rgba(20, 34, 28, 0.88);
+  border-color: transparent;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.18);
+}

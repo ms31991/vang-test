@@ -1,0 +1,17 @@
+.legal {
+  max-width: 720px;
+  padding-bottom: 48px;
+}
+
+.legal h1 {
+  margin: 0 0 16px;
+  color: var(--ink);
+  font-size: 40px;
+  letter-spacing: -0.04em;
+}
+
+.legal p {
+  margin: 0 0 14px;
+  color: var(--muted);
+  line-height: 1.7;
+}

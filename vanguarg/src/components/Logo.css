@@ -1,0 +1,18 @@
+.brand-logo {
+  display: inline-flex;
+  line-height: 0;
+}
+
+.brand-logo img {
+  display: block;
+  width: auto;
+  height: 70px;
+}
+
+.brand-logo--sm img {
+  height: 52px;
+}
+
+.brand-logo--lg img {
+  height: 148px;
+}
