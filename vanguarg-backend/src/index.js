@@ -2,7 +2,7 @@ import "dotenv/config";
 import "./loadEnv.js";
 import cors from "cors";
 import express from "express";
-import sql from 'mssql';import { clerkMiddleware } from "@clerk/express";
+import { clerkMiddleware } from "@clerk/express";
 import { connectDb, getPool } from "./db.js";
 import { requireUser } from "./Auth.js";
 import propertiesRouter from "./Properties.js";
@@ -26,8 +26,8 @@ app.use(seoRouter);
 
 app.get("/api/health", async (_req, res) => {
   try {
-    const r = await getPool().request().query("SELECT DB_NAME() AS name");
-    res.json({ ok: true, service: "vanguarg-backend", database: r.recordset[0].name });
+    const r = await getPool().query("SELECT current_database() AS name");
+    res.json({ ok: true, service: "vanguarg-backend", database: r.rows[0].name });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }
@@ -42,14 +42,13 @@ app.put("/api/me", requireUser, async (req, res, next) => {
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
       return res.status(400).json({ error: "Email i pavlefshëm." });
     }
-    await getPool().request()
-      .input("id", sql.Int, req.user.id)
-      .input("email", sql.NVarChar, email || null)
-      .input("name", sql.NVarChar, name || null)
-      .query(`UPDATE dbo.Users
-              SET Email = COALESCE(@email, Email),
-                  FullName = COALESCE(@name, FullName)
-              WHERE Id = @id`);
+    await getPool().query(
+      `UPDATE users
+       SET email = COALESCE($1::text, email),
+           full_name = COALESCE($2::text, full_name)
+       WHERE id = $3`,
+      [email || null, name || null, req.user.id]
+    );
     res.json({ ok: true });
   } catch (err) {
     next(err);
