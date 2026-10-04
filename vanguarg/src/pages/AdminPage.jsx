@@ -35,6 +35,13 @@ const emptyForm = {
   area: "",
 };
 
+const emptyService = {
+  titleDe: "",
+  titleEn: "",
+  textDe: "",
+  textEn: "",
+};
+
 const MAX_PHOTOS = 20;
 
 function toAdminProperty(row) {
@@ -48,30 +55,40 @@ function toAdminProperty(row) {
 }
 
 const sections = [
-  { id: "properties", label: "adminNavProperties" },
-  { id: "services", label: "adminNavServices" },
-  { id: "users", label: "adminNavUsers" },
-  { id: "messages", label: "adminNavMessages" },
+  {
+    id: "properties",
+    label: "adminNavProperties",
+  },
+  {
+    id: "services",
+    label: "adminNavServices",
+  },
+  {
+    id: "users",
+    label: "adminNavUsers",
+  },
+  {
+    id: "messages",
+    label: "adminNavMessages",
+  },
 ];
-
-const emptyService = {
-  titleDe: "",
-  titleEn: "",
-  textDe: "",
-  textEn: "",
-};
 
 function placeFromLocation(location) {
   const place = swissPlaces.find(
-    (item) => item.de === location || item.en === location,
+    (item) =>
+      item.de === location ||
+      item.en === location,
   );
 
   const parent = place
-    ? swissPlaces.find((item) => item.id === place.cityId)
+    ? swissPlaces.find(
+        (item) => item.id === place.cityId,
+      )
     : null;
 
   const neighborhood =
-    place && place.id !== place.cityId
+    place &&
+    place.id !== place.cityId
       ? place.de.split("–").pop().trim()
       : null;
 
@@ -87,6 +104,7 @@ function placeFromLocation(location) {
 
 export default function AdminPage() {
   const { t } = useLanguage();
+  const navigate = useNavigate();
 
   usePageSeo({
     title: `${t("navAdmin")} | Vanguard`,
@@ -95,91 +113,125 @@ export default function AdminPage() {
     noindex: true,
   });
 
-  const navigate = useNavigate();
-
   const {
     isLoaded,
     isSignedIn,
     getToken,
   } = useAuth();
 
-  const [section, setSection] = useState("properties");
+  const [section, setSection] =
+    useState("properties");
+
   const [items, setItems] = useState([]);
   const [users, setUsers] = useState([]);
-  const [serviceItems, setServiceItems] = useState([]);
+  const [serviceItems, setServiceItems] =
+    useState([]);
 
-  const [form, setForm] = useState(emptyForm);
+  const [form, setForm] =
+    useState(emptyForm);
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+  const [showForm, setShowForm] =
+    useState(false);
 
-  const [photos, setPhotos] = useState([]);
-  const [previews, setPreviews] = useState([]);
-  const [existingPhotos, setExistingPhotos] = useState([]);
+  const [editingId, setEditingId] =
+    useState(null);
 
-  const [message, setMessage] = useState("");
+  const [photos, setPhotos] =
+    useState([]);
+
+  const [previews, setPreviews] =
+    useState([]);
+
+  const [existingPhotos, setExistingPhotos] =
+    useState([]);
+
+  const [message, setMessage] =
+    useState("");
 
   const photoInput = useRef(null);
 
-  /*
-   * ==========================
-   * LOAD SECTION DATA
-   * ==========================
-   *
-   * Të gjithë përdoruesit e kyçur
-   * mund ta përdorin këtë faqe.
-   */
+  // =====================================================
+  // LOAD DATA
+  // =====================================================
+
   useEffect(() => {
-    if (!isLoaded || !isSignedIn || section === "messages") {
+    if (
+      !isLoaded ||
+      !isSignedIn ||
+      section === "messages"
+    ) {
       return;
     }
 
     let ignore = false;
 
-    getToken()
-      .then(async (token) => {
+    async function loadData() {
+      try {
+        const token = await getToken();
+
         if (section === "properties") {
-          const rows = await api("/api/properties/manage", {
-            token,
-          });
+          const rows = await api(
+            "/api/properties/manage",
+            {
+              token,
+            },
+          );
 
           if (!ignore) {
-            setItems(rows.map(toAdminProperty));
+            setItems(
+              rows.map(toAdminProperty),
+            );
           }
-        } else if (section === "users") {
-          const rows = await api("/api/users", {
-            token,
-          });
+        }
+
+        if (section === "users") {
+          const rows = await api(
+            "/api/users",
+            {
+              token,
+            },
+          );
 
           if (!ignore) {
             setUsers(rows);
           }
-        } else if (section === "services") {
-          const rows = await api("/api/services", {
-            token,
-          });
+        }
+
+        if (section === "services") {
+          const rows = await api(
+            "/api/services",
+            {
+              token,
+            },
+          );
 
           if (!ignore) {
             setServiceItems(rows);
           }
         }
-      })
-      .catch((error) => {
+      } catch (error) {
         if (!ignore) {
           setMessage(error.message);
         }
-      });
+      }
+    }
+
+    loadData();
 
     return () => {
       ignore = true;
     };
-  }, [isLoaded, isSignedIn, section, getToken]);
+  }, [
+    isLoaded,
+    isSignedIn,
+    section,
+    getToken,
+  ]);
 
-  /*
-   * ==========================
-   * PHOTO PREVIEWS
-   * ==========================
-   */
+  // =====================================================
+  // PHOTO PREVIEWS
+  // =====================================================
+
   useEffect(() => {
     const urls = photos.map((file) =>
       URL.createObjectURL(file),
@@ -188,15 +240,16 @@ export default function AdminPage() {
     setPreviews(urls);
 
     return () => {
-      urls.forEach((url) => URL.revokeObjectURL(url));
+      urls.forEach((url) =>
+        URL.revokeObjectURL(url),
+      );
     };
   }, [photos]);
 
-  /*
-   * ==========================
-   * CLEAR PHOTOS
-   * ==========================
-   */
+  // =====================================================
+  // CLEAR PHOTOS
+  // =====================================================
+
   function clearPhotos() {
     setPhotos([]);
     setExistingPhotos([]);
@@ -206,11 +259,10 @@ export default function AdminPage() {
     }
   }
 
-  /*
-   * ==========================
-   * OPEN SECTION
-   * ==========================
-   */
+  // =====================================================
+  // OPEN SECTION
+  // =====================================================
+
   function openSection(id) {
     setSection(id);
     setMessage("");
@@ -220,13 +272,13 @@ export default function AdminPage() {
     clearPhotos();
   }
 
-  /*
-   * ==========================
-   * ADD PHOTOS
-   * ==========================
-   */
+  // =====================================================
+  // ADD PHOTOS
+  // =====================================================
+
   function addPhotos(fileList) {
-    const incoming = Array.from(fileList || []);
+    const incoming =
+      Array.from(fileList || []);
 
     if (photoInput.current) {
       photoInput.current.value = "";
@@ -236,8 +288,11 @@ export default function AdminPage() {
       return;
     }
 
-    const accepted = incoming.filter((file) =>
-      /^image\/(jpeg|png|webp)$/.test(file.type),
+    const accepted = incoming.filter(
+      (file) =>
+        /^image\/(jpeg|png|webp)$/.test(
+          file.type,
+        ),
     );
 
     if (!accepted.length) {
@@ -248,38 +303,41 @@ export default function AdminPage() {
     setMessage("");
 
     setPhotos((current) =>
-      [...current, ...accepted].slice(0, MAX_PHOTOS),
+      [...current, ...accepted].slice(
+        0,
+        MAX_PHOTOS,
+      ),
     );
   }
 
-  /*
-   * ==========================
-   * REMOVE PHOTO
-   * ==========================
-   */
+  // =====================================================
+  // REMOVE PHOTO
+  // =====================================================
+
   function removePhoto(index) {
     setPhotos((current) =>
-      current.filter((_, i) => i !== index),
+      current.filter(
+        (_, i) => i !== index,
+      ),
     );
   }
 
-  /*
-   * ==========================
-   * UPDATE FORM
-   * ==========================
-   */
+  // =====================================================
+  // UPDATE FORM
+  // =====================================================
+
   function updateField(event) {
     setForm((current) => ({
       ...current,
-      [event.target.name]: event.target.value,
+      [event.target.name]:
+        event.target.value,
     }));
   }
 
-  /*
-   * ==========================
-   * START ADD
-   * ==========================
-   */
+  // =====================================================
+  // START ADD
+  // =====================================================
+
   function startAdd() {
     setEditingId(null);
     setForm(emptyForm);
@@ -288,23 +346,20 @@ export default function AdminPage() {
     clearPhotos();
   }
 
-  /*
-   * ==========================
-   * START EDIT
-   * ==========================
-   *
-   * Redaktimi bëhet te:
-   * /verwaltung/bearbeiten/:id
-   */
+  // =====================================================
+  // START EDIT
+  // =====================================================
+
   function startEdit(property) {
-    navigate(`/verwaltung/bearbeiten/${property.id}`);
+    navigate(
+      `/verwaltung/bearbeiten/${property.id}`,
+    );
   }
 
-  /*
-   * ==========================
-   * CANCEL EDIT
-   * ==========================
-   */
+  // =====================================================
+  // CANCEL
+  // =====================================================
+
   function cancelEdit() {
     setEditingId(null);
     setForm(emptyForm);
@@ -312,37 +367,49 @@ export default function AdminPage() {
     clearPhotos();
   }
 
-  /*
-   * ==========================
-   * REFRESH PROPERTIES
-   * ==========================
-   */
-  async function refresh(token) {
-    const rows = await api("/api/properties/manage", {
-      token,
-    });
+  // =====================================================
+  // REFRESH PROPERTIES
+  // =====================================================
 
-    setItems(rows.map(toAdminProperty));
+  async function refresh(token) {
+    const rows = await api(
+      "/api/properties/manage",
+      {
+        token,
+      },
+    );
+
+    setItems(
+      rows.map(toAdminProperty),
+    );
   }
 
-  /*
-   * ==========================
-   * SAVE PROPERTY
-   * ==========================
-   */
+  // =====================================================
+  // SAVE PROPERTY
+  // =====================================================
+
   async function handleSubmit(event) {
     event.preventDefault();
 
     setMessage("");
 
-    const place = placeFromLocation(form.location);
+    const place =
+      placeFromLocation(
+        form.location,
+      );
 
-    const roomCounts = ROOM_FIELDS
-      .map(([type]) => ({
-        type,
-        count: Number(form[type]),
-      }))
-      .filter((room) => room.count > 0);
+    const roomCounts =
+      ROOM_FIELDS
+        .map(([type]) => ({
+          type,
+          count: Number(
+            form[type],
+          ),
+        }))
+        .filter(
+          (room) =>
+            room.count > 0,
+        );
 
     const body = {
       title: form.title,
@@ -356,34 +423,47 @@ export default function AdminPage() {
 
       areaM2: Number(form.area),
 
-      listingType: form.listingType,
+      listingType:
+        form.listingType,
+
       status: form.status,
-      visibility: form.visibility,
+
+      visibility:
+        form.visibility,
 
       roomCounts,
     };
 
     try {
-      const token = await getToken();
+      const token =
+        await getToken();
 
-      const saved = await api(
-        editingId
-          ? `/api/properties/${editingId}`
-          : "/api/properties",
-        {
-          method: editingId ? "PUT" : "POST",
-          token,
-          body,
-        },
-      );
+      const saved =
+        await api(
+          editingId
+            ? `/api/properties/${editingId}`
+            : "/api/properties",
+          {
+            method: editingId
+              ? "PUT"
+              : "POST",
+            token,
+            body,
+          },
+        );
 
       setEditingId(saved.id);
 
+      // Upload photos
       if (photos.length) {
-        const data = new FormData();
+        const data =
+          new FormData();
 
         photos.forEach((file) => {
-          data.append("images", file);
+          data.append(
+            "images",
+            file,
+          );
         });
 
         await api(
@@ -400,29 +480,38 @@ export default function AdminPage() {
 
       await refresh(token);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message,
+      );
     }
   }
 
-  /*
-   * ==========================
-   * DELETE PROPERTY
-   * ==========================
-   */
+  // =====================================================
+  // DELETE PROPERTY
+  // =====================================================
+
   async function handleDelete(id) {
-    if (!window.confirm(t("confirmDelete"))) {
+    if (
+      !window.confirm(
+        t("confirmDelete"),
+      )
+    ) {
       return;
     }
 
     setMessage("");
 
     try {
-      const token = await getToken();
+      const token =
+        await getToken();
 
-      await api(`/api/properties/${id}`, {
-        method: "DELETE",
-        token,
-      });
+      await api(
+        `/api/properties/${id}`,
+        {
+          method: "DELETE",
+          token,
+        },
+      );
 
       if (editingId === id) {
         cancelEdit();
@@ -430,85 +519,139 @@ export default function AdminPage() {
 
       await refresh(token);
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message,
+      );
     }
   }
 
-  /*
-   * ==========================
-   * STATUS LABELS
-   * ==========================
-   */
+  // =====================================================
+  // STATUS LABELS
+  // =====================================================
+
   const statusLabel = {
-    available: t("statusAvailable"),
-    sold: t("statusSold"),
-    rented: t("statusRented"),
+    available:
+      t("statusAvailable"),
+
+    sold:
+      t("statusSold"),
+
+    rented:
+      t("statusRented"),
   };
 
-  /*
-   * ==========================
-   * UPDATE SERVICE
-   * ==========================
-   */
-  function updateService(index, field, value) {
-    setServiceItems((current) =>
-      current.map((item, i) =>
-        i === index
-          ? {
-              ...item,
-              [field]: value,
-            }
-          : item,
-      ),
+  // =====================================================
+  // UPDATE SERVICE
+  // =====================================================
+
+  function updateService(
+    index,
+    field,
+    value,
+  ) {
+    setServiceItems(
+      (current) =>
+        current.map(
+          (item, i) =>
+            i === index
+              ? {
+                  ...item,
+                  [field]: value,
+                }
+              : item,
+        ),
     );
   }
 
-  /*
-   * ==========================
-   * SAVE SERVICES
-   * ==========================
-   */
+  // =====================================================
+  // ADD SERVICE
+  // =====================================================
+
+  function addService() {
+    setServiceItems(
+      (current) => [
+        ...current,
+        {
+          ...emptyService,
+        },
+      ],
+    );
+  }
+
+  // =====================================================
+  // DELETE SERVICE
+  // =====================================================
+
+  function deleteService(index) {
+    setServiceItems(
+      (current) =>
+        current.filter(
+          (_, i) =>
+            i !== index,
+        ),
+    );
+  }
+
+  // =====================================================
+  // SAVE SERVICES
+  // =====================================================
+
   async function saveServices(event) {
     event.preventDefault();
 
     setMessage("");
 
     try {
-      const token = await getToken();
+      const token =
+        await getToken();
 
-      const saved = await api("/api/services", {
-        token,
-        method: "PUT",
-        body: {
-          items: serviceItems,
-        },
-      });
+      const saved =
+        await api(
+          "/api/services",
+          {
+            token,
+            method: "PUT",
+            body: {
+              items:
+                serviceItems,
+            },
+          },
+        );
 
       setServiceItems(saved);
 
-      setMessage(t("servicesSaved"));
+      setMessage(
+        t("servicesSaved"),
+      );
     } catch (error) {
-      setMessage(error.message);
+      setMessage(
+        error.message,
+      );
     }
   }
 
-  /*
-   * ==========================
-   * PAGE TITLES
-   * ==========================
-   */
+  // =====================================================
+  // PAGE TITLES
+  // =====================================================
+
   const titles = {
-    properties: t("adminNavProperties"),
-    services: t("adminNavServices"),
-    users: t("adminUsersTitle"),
-    messages: t("adminMessagesTitle"),
+    properties:
+      t("adminNavProperties"),
+
+    services:
+      t("adminNavServices"),
+
+    users:
+      t("adminUsersTitle"),
+
+    messages:
+      t("adminMessagesTitle"),
   };
 
-  /*
-   * ==========================
-   * RENDER
-   * ==========================
-   */
+  // =====================================================
+  // RENDER
+  // =====================================================
+
   return (
     <section className="section admin">
 
@@ -527,44 +670,54 @@ export default function AdminPage() {
 
       {/* LOADING */}
       {!isLoaded ? (
-        <p>{t("loading")}</p>
+        <p>
+          {t("loading")}
+        </p>
       ) : null}
 
       {/* NOT LOGGED IN */}
-      {isLoaded && !isSignedIn ? (
+      {isLoaded &&
+      !isSignedIn ? (
         <p className="admin-message">
           {t("signInToAdd")}{" "}
+
           <Link to="/anmelden">
             {t("navLogin")}
           </Link>
         </p>
       ) : null}
 
-      {/* ==========================
-          LOGGED-IN USERS
-      =========================== */}
-      {isLoaded && isSignedIn ? (
+      {/* LOGGED-IN USER */}
+      {isLoaded &&
+      isSignedIn ? (
         <div className="admin-shell">
 
           {/* SIDEBAR */}
           <aside className="admin-sidebar">
 
-            {sections.map((item) => (
-              <button
-                key={item.id}
-                type="button"
-                className={
-                  section === item.id
-                    ? "active"
-                    : ""
-                }
-                onClick={() =>
-                  openSection(item.id)
-                }
-              >
-                {t(item.label)}
-              </button>
-            ))}
+            {sections.map(
+              (item) => (
+                <button
+                  key={item.id}
+                  type="button"
+                  className={
+                    section ===
+                    item.id
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() =>
+                    openSection(
+                      item.id,
+                    )
+                  }
+                >
+                  {t(
+                    item.label,
+                  )}
+                </button>
+              ),
+            )}
 
           </aside>
 
@@ -577,32 +730,36 @@ export default function AdminPage() {
               <h2>
                 {titles[section]}
 
-                {section === "properties" ? (
+                {section ===
+                "properties" ? (
                   <span className="admin-count">
                     {items.length}
                   </span>
                 ) : null}
               </h2>
 
-              {section === "properties" ? (
+              {/* ADD PROPERTY */}
+              {section ===
+              "properties" ? (
                 <button
                   type="button"
                   className="admin-add"
-                  onClick={startAdd}
+                  onClick={
+                    startAdd
+                  }
                 >
                   {t("addNew")}
                 </button>
               ) : null}
 
-              {section === "services" ? (
+              {/* ADD SERVICE */}
+              {section ===
+              "services" ? (
                 <button
                   type="button"
                   className="admin-add"
-                  onClick={() =>
-                    setServiceItems((current) => [
-                      ...current,
-                      emptyService,
-                    ])
+                  onClick={
+                    addService
                   }
                 >
                   {t("addNew")}
@@ -611,130 +768,196 @@ export default function AdminPage() {
 
             </div>
 
-            {/* ==========================
+            {/* =================================================
                 PROPERTY FORM
-            =========================== */}
-            {section === "properties" &&
+            ================================================== */}
+
+            {section ===
+              "properties" &&
             showForm ? (
               <form
                 className="admin-form"
-                onSubmit={handleSubmit}
+                onSubmit={
+                  handleSubmit
+                }
               >
 
                 <label>
-                  {t("fieldTitle")}
+                  {t(
+                    "fieldTitle",
+                  )}
 
                   <input
                     name="title"
-                    value={form.title}
-                    onChange={updateField}
+                    value={
+                      form.title
+                    }
+                    onChange={
+                      updateField
+                    }
                     required
                   />
                 </label>
 
                 <label>
-                  {t("fieldLocation")}
+                  {t(
+                    "fieldLocation",
+                  )}
 
                   <input
                     name="location"
-                    value={form.location}
-                    onChange={updateField}
+                    value={
+                      form.location
+                    }
+                    onChange={
+                      updateField
+                    }
                     required
                   />
                 </label>
 
                 <label>
-                  {t("fieldPrice")}
+                  {t(
+                    "fieldPrice",
+                  )}
 
                   <input
                     name="price"
                     type="number"
                     min="1"
-                    value={form.price}
-                    onChange={updateField}
+                    value={
+                      form.price
+                    }
+                    onChange={
+                      updateField
+                    }
                     required
                   />
                 </label>
 
                 <label>
-                  {t("fieldListing")}
+                  {t(
+                    "fieldListing",
+                  )}
 
                   <select
                     name="listingType"
-                    value={form.listingType}
-                    onChange={updateField}
+                    value={
+                      form.listingType
+                    }
+                    onChange={
+                      updateField
+                    }
                   >
                     <option value="sale">
-                      {t("listingSale")}
+                      {t(
+                        "listingSale",
+                      )}
                     </option>
 
                     <option value="rent">
-                      {t("listingRent")}
+                      {t(
+                        "listingRent",
+                      )}
                     </option>
                   </select>
                 </label>
 
                 <label>
-                  {t("fieldStatus")}
+                  {t(
+                    "fieldStatus",
+                  )}
 
                   <select
                     name="status"
-                    value={form.status}
-                    onChange={updateField}
+                    value={
+                      form.status
+                    }
+                    onChange={
+                      updateField
+                    }
                   >
                     <option value="available">
-                      {t("statusAvailable")}
+                      {t(
+                        "statusAvailable",
+                      )}
                     </option>
 
                     <option value="rented">
-                      {t("statusRented")}
+                      {t(
+                        "statusRented",
+                      )}
                     </option>
 
                     <option value="sold">
-                      {t("statusSold")}
+                      {t(
+                        "statusSold",
+                      )}
                     </option>
                   </select>
                 </label>
 
                 <label>
-                  {t("fieldVisibility")}
+                  {t(
+                    "fieldVisibility",
+                  )}
 
                   <select
                     name="visibility"
-                    value={form.visibility}
-                    onChange={updateField}
+                    value={
+                      form.visibility
+                    }
+                    onChange={
+                      updateField
+                    }
                   >
                     <option value="public">
-                      {t("visibilityPublic")}
+                      {t(
+                        "visibilityPublic",
+                      )}
                     </option>
 
                     <option value="private">
-                      {t("visibilityPrivate")}
+                      {t(
+                        "visibilityPrivate",
+                      )}
                     </option>
                   </select>
                 </label>
 
                 <label>
-                  {t("fieldRooms")}
+                  {t(
+                    "fieldRooms",
+                  )}
 
                   <input
                     name="rooms"
                     type="number"
                     min="1"
-                    value={form.rooms}
-                    onChange={updateField}
+                    value={
+                      form.rooms
+                    }
+                    onChange={
+                      updateField
+                    }
                   />
                 </label>
 
                 <label>
-                  {t("fieldArea")}
+                  {t(
+                    "fieldArea",
+                  )}
 
                   <input
                     name="area"
                     type="number"
                     min="1"
-                    value={form.area}
-                    onChange={updateField}
+                    value={
+                      form.area
+                    }
+                    onChange={
+                      updateField
+                    }
                     required
                   />
                 </label>
@@ -743,22 +966,41 @@ export default function AdminPage() {
                 <div className="admin-rooms">
 
                   <span>
-                    {t("roomsHint")}
+                    {t(
+                      "roomsHint",
+                    )}
                   </span>
 
                   <div className="admin-rooms-grid">
 
                     {ROOM_FIELDS.map(
-                      ([type, label]) => (
-                        <label key={type}>
-                          {t(label)}
+                      ([
+                        type,
+                        label,
+                      ]) => (
+                        <label
+                          key={
+                            type
+                          }
+                        >
+                          {t(
+                            label,
+                          )}
 
                           <input
-                            name={type}
+                            name={
+                              type
+                            }
                             type="number"
                             min="1"
-                            value={form[type]}
-                            onChange={updateField}
+                            value={
+                              form[
+                                type
+                              ]
+                            }
+                            onChange={
+                              updateField
+                            }
                           />
                         </label>
                       ),
@@ -771,7 +1013,9 @@ export default function AdminPage() {
                 <div className="admin-photos">
 
                   <span className="admin-photos-label">
-                    {t("fieldPhotos")}
+                    {t(
+                      "fieldPhotos",
+                    )}
                   </span>
 
                   <div
@@ -783,22 +1027,31 @@ export default function AdminPage() {
                     }`}
                   >
 
+                    {/* EXISTING PHOTOS */}
                     {existingPhotos.map(
                       (photo) => (
                         <div
                           className="photo-slot"
-                          key={photo.Id}
+                          key={
+                            photo.Id
+                          }
                         >
                           <img
-                            src={photo.Url}
+                            src={
+                              photo.Url
+                            }
                             alt=""
                           />
                         </div>
                       ),
                     )}
 
+                    {/* NEW PHOTOS */}
                     {previews.map(
-                      (url, index) => (
+                      (
+                        url,
+                        index,
+                      ) => (
                         <div
                           className="photo-slot"
                           key={url}
@@ -812,7 +1065,9 @@ export default function AdminPage() {
                             type="button"
                             className="photo-remove"
                             onClick={() =>
-                              removePhoto(index)
+                              removePhoto(
+                                index,
+                              )
                             }
                             aria-label={t(
                               "deleteProperty",
@@ -836,24 +1091,32 @@ export default function AdminPage() {
                       )}
                     >
                       <span className="photo-add">
+
                         <svg
                           viewBox="0 0 24 24"
                           aria-hidden="true"
                         >
                           <path d="M12 5v14M5 12h14" />
                         </svg>
+
                       </span>
                     </button>
 
                     <input
-                      ref={photoInput}
+                      ref={
+                        photoInput
+                      }
                       className="photo-input"
                       type="file"
                       accept="image/jpeg,image/png,image/webp"
                       multiple
-                      onChange={(event) =>
+                      onChange={(
+                        event,
+                      ) =>
                         addPhotos(
-                          event.target.files,
+                          event
+                            .target
+                            .files,
                         )
                       }
                     />
@@ -861,7 +1124,9 @@ export default function AdminPage() {
                   </div>
 
                   <span>
-                    {t("photosHint")}
+                    {t(
+                      "photosHint",
+                    )}
                   </span>
 
                 </div>
@@ -871,16 +1136,24 @@ export default function AdminPage() {
 
                   <button type="submit">
                     {editingId
-                      ? t("saveProperty")
-                      : t("addProperty")}
+                      ? t(
+                          "saveProperty",
+                        )
+                      : t(
+                          "addProperty",
+                        )}
                   </button>
 
                   <button
                     type="button"
                     className="ghost"
-                    onClick={cancelEdit}
+                    onClick={
+                      cancelEdit
+                    }
                   >
-                    {t("cancelEdit")}
+                    {t(
+                      "cancelEdit",
+                    )}
                   </button>
 
                 </div>
@@ -895,92 +1168,120 @@ export default function AdminPage() {
               </p>
             ) : null}
 
-            {/* ==========================
+            {/* =================================================
                 PROPERTIES
-            =========================== */}
-            {section === "properties" ? (
+            ================================================== */}
+
+            {section ===
+            "properties" ? (
               items.length ? (
                 <div className="property-grid">
 
-                  {items.map((property) => (
-                    <div key={property.id}>
+                  {items.map(
+                    (property) => (
+                      <div
+                        key={
+                          property.id
+                        }
+                      >
 
-                      <PropertiesCard
-                        property={property}
-                      />
+                        <PropertiesCard
+                          property={
+                            property
+                          }
+                        />
 
-                      <p className="admin-status">
+                        <p className="admin-status">
 
-                        <span
-                          className={`pill pill-${property.status}`}
-                        >
-                          {statusLabel[
-                            property.status
-                          ] ||
-                            property.status}
-                        </span>
+                          <span
+                            className={`pill pill-${property.status}`}
+                          >
+                            {
+                              statusLabel[
+                                property
+                                  .status
+                              ] ||
+                              property.status
+                            }
+                          </span>
 
-                        <span className="pill pill-vis">
-                          {property.visibility ===
-                          "private"
-                            ? t(
-                                "visibilityPrivate",
+                          <span className="pill pill-vis">
+                            {property.visibility ===
+                            "private"
+                              ? t(
+                                  "visibilityPrivate",
+                                )
+                              : t(
+                                  "visibilityPublic",
+                                )}
+                          </span>
+
+                        </p>
+
+                        <div className="admin-card-actions">
+
+                          <button
+                            type="button"
+                            className="ghost"
+                            onClick={() =>
+                              startEdit(
+                                property,
                               )
-                            : t(
-                                "visibilityPublic",
-                              )}
-                        </span>
+                            }
+                          >
+                            {t(
+                              "editProperty",
+                            )}
+                          </button>
 
-                      </p>
+                          <button
+                            type="button"
+                            className="danger"
+                            onClick={() =>
+                              handleDelete(
+                                property.id,
+                              )
+                            }
+                          >
+                            {t(
+                              "deleteProperty",
+                            )}
+                          </button>
 
-                      <div className="admin-card-actions">
-
-                        <button
-                          type="button"
-                          className="ghost"
-                          onClick={() =>
-                            startEdit(property)
-                          }
-                        >
-                          {t("editProperty")}
-                        </button>
-
-                        <button
-                          type="button"
-                          className="danger"
-                          onClick={() =>
-                            handleDelete(
-                              property.id,
-                            )
-                          }
-                        >
-                          {t("deleteProperty")}
-                        </button>
+                        </div>
 
                       </div>
-
-                    </div>
-                  ))}
+                    ),
+                  )}
 
                 </div>
               ) : (
                 <p className="admin-message">
-                  {t("adminEmpty")}
+                  {t(
+                    "adminEmpty",
+                  )}
                 </p>
               )
             ) : null}
 
-            {/* ==========================
+            {/* =================================================
                 SERVICES
-            =========================== */}
-            {section === "services" ? (
+            ================================================== */}
+
+            {section ===
+            "services" ? (
               <form
                 className="service-editor"
-                onSubmit={saveServices}
+                onSubmit={
+                  saveServices
+                }
               >
 
                 {serviceItems.map(
-                  (item, index) => (
+                  (
+                    item,
+                    index,
+                  ) => (
                     <article
                       key={
                         item.id ||
@@ -989,15 +1290,23 @@ export default function AdminPage() {
                     >
 
                       <label>
-                        {t("fieldTitleDe")}
+                        {t(
+                          "fieldTitleDe",
+                        )}
 
                         <input
-                          value={item.titleDe}
-                          onChange={(event) =>
+                          value={
+                            item.titleDe
+                          }
+                          onChange={(
+                            event,
+                          ) =>
                             updateService(
                               index,
                               "titleDe",
-                              event.target.value,
+                              event
+                                .target
+                                .value,
                             )
                           }
                           required
@@ -1005,30 +1314,46 @@ export default function AdminPage() {
                       </label>
 
                       <label>
-                        {t("fieldTitleEn")}
+                        {t(
+                          "fieldTitleEn",
+                        )}
 
                         <input
-                          value={item.titleEn}
-                          onChange={(event) =>
+                          value={
+                            item.titleEn
+                          }
+                          onChange={(
+                            event,
+                          ) =>
                             updateService(
                               index,
                               "titleEn",
-                              event.target.value,
+                              event
+                                .target
+                                .value,
                             )
                           }
                         />
                       </label>
 
                       <label>
-                        {t("fieldTextDe")}
+                        {t(
+                          "fieldTextDe",
+                        )}
 
                         <textarea
-                          value={item.textDe}
-                          onChange={(event) =>
+                          value={
+                            item.textDe
+                          }
+                          onChange={(
+                            event,
+                          ) =>
                             updateService(
                               index,
                               "textDe",
-                              event.target.value,
+                              event
+                                .target
+                                .value,
                             )
                           }
                           required
@@ -1036,15 +1361,23 @@ export default function AdminPage() {
                       </label>
 
                       <label>
-                        {t("fieldTextEn")}
+                        {t(
+                          "fieldTextEn",
+                        )}
 
                         <textarea
-                          value={item.textEn}
-                          onChange={(event) =>
+                          value={
+                            item.textEn
+                          }
+                          onChange={(
+                            event,
+                          ) =>
                             updateService(
                               index,
                               "textEn",
-                              event.target.value,
+                              event
+                                .target
+                                .value,
                             )
                           }
                         />
@@ -1054,16 +1387,14 @@ export default function AdminPage() {
                         type="button"
                         className="danger"
                         onClick={() =>
-                          setServiceItems(
-                            (current) =>
-                              current.filter(
-                                (_, i) =>
-                                  i !== index,
-                              ),
+                          deleteService(
+                            index,
                           )
                         }
                       >
-                        {t("deleteProperty")}
+                        {t(
+                          "deleteProperty",
+                        )}
                       </button>
 
                     </article>
@@ -1071,63 +1402,98 @@ export default function AdminPage() {
                 )}
 
                 <div className="service-editor-actions">
+
                   <button type="submit">
-                    {t("saveProperty")}
+                    {t(
+                      "saveProperty",
+                    )}
                   </button>
+
                 </div>
 
               </form>
             ) : null}
 
-            {/* ==========================
+            {/* =================================================
                 USERS
-            =========================== */}
-            {section === "users" ? (
+            ================================================== */}
+
+            {section ===
+            "users" ? (
               users.length ? (
                 <table className="admin-table">
 
                   <thead>
                     <tr>
-                      <th>{t("name")}</th>
-                      <th>{t("email")}</th>
-                      <th>{t("userRole")}</th>
+                      <th>
+                        {t("name")}
+                      </th>
+
+                      <th>
+                        {t("email")}
+                      </th>
+
+                      <th>
+                        {t(
+                          "userRole",
+                        )}
+                      </th>
                     </tr>
                   </thead>
 
                   <tbody>
 
-                    {users.map((user) => (
-                      <tr key={user.Id}>
+                    {users.map(
+                      (user) => (
+                        <tr
+                          key={
+                            user.Id
+                          }
+                        >
 
-                        <td>
-                          {user.FullName || "–"}
-                        </td>
+                          <td>
+                            {
+                              user.FullName ||
+                              "–"
+                            }
+                          </td>
 
-                        <td>
-                          {user.Email || "–"}
-                        </td>
+                          <td>
+                            {
+                              user.Email ||
+                              "–"
+                            }
+                          </td>
 
-                        <td>
-                          {user.Role || "–"}
-                        </td>
+                          <td>
+                            {
+                              user.Role ||
+                              "–"
+                            }
+                          </td>
 
-                      </tr>
-                    ))}
+                        </tr>
+                      ),
+                    )}
 
                   </tbody>
 
                 </table>
               ) : (
                 <p className="admin-message">
-                  {t("adminEmpty")}
+                  {t(
+                    "adminEmpty",
+                  )}
                 </p>
               )
             ) : null}
 
-            {/* ==========================
+            {/* =================================================
                 MESSAGES
-            =========================== */}
-            {section === "messages" ? (
+            ================================================== */}
+
+            {section ===
+            "messages" ? (
               <SupportChat embedded />
             ) : null}
 
