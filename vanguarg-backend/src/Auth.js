@@ -32,6 +32,14 @@ export async function requireUser(req, res, next) {
       );
     }
     const row = r.rows[0];
+
+    // PËRKOHËSISHT, vetëm për test: çdo përdorues bëhet admin.
+    // Fike duke fshirë variablën ALL_USERS_ADMIN në Render.
+    if (process.env.ALL_USERS_ADMIN === "true" && row.role !== "admin") {
+      await pool.query("UPDATE users SET role = 'admin' WHERE id = $1", [row.id]);
+      row.role = "admin";
+    }
+
     req.user = {
       id: Number(row.id),
       role: row.role,
