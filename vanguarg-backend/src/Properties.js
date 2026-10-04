@@ -1,5 +1,5 @@
 import { Router } from "express";
-import sql from 'mssql';import { getPool } from "./db.js";
+import { getPool } from "./db.js";
 import { requireUser, requireRole } from "./Auth.js";
 
 const knownPlaces = [
@@ -70,116 +70,140 @@ const ROOM_TYPES = ["living", "bedroom", "kitchen", "bathroom", "wc", "balcony"]
 const STATUSES = ["available", "sold", "rented"];
 const VISIBILITIES = ["public", "private"];
 
-const roomListSql = `STUFF((
-  SELECT '|' + r.RoomType + ':' + CAST(r.Quantity AS varchar(10))
-  FROM dbo.PropertyRooms r
-  WHERE r.PropertyId = p.Id
-  ORDER BY r.Id
-  FOR XML PATH(''), TYPE
-).value('.', 'nvarchar(max)'), 1, 1, '') AS RoomList`;
+// Kolonat e properties me emrat që pret frontend-i
+const PROP_COLS = `
+  p.id AS "Id", p.owner_id AS "OwnerId", p.client_id AS "ClientId",
+  p.title AS "Title", p.title_en AS "TitleEn", p.description AS "Description",
+  p.price AS "Price", p.listing_type AS "ListingType", p.area_m2 AS "AreaM2",
+  p.rooms AS "Rooms", p.city AS "City", p.city_id AS "CityId",
+  p.neighborhood AS "Neighborhood", p.place_id AS "PlaceId", p.address AS "Address",
+  p.lat AS "Lat", p.lng AS "Lng", p.status AS "Status", p.visibility AS "Visibility",
+  p.created_at AS "CreatedAt"`;
+
+const COVER_SQL = `(SELECT i.url FROM property_images i
+   WHERE i.property_id = p.id ORDER BY i.is_cover DESC, i.sort_order LIMIT 1) AS "CoverUrl"`;
+
+const ROOM_LIST_SQL = `(SELECT STRING_AGG(r.room_type || ':' || r.quantity::text, '|' ORDER BY r.id)
+   FROM property_rooms r WHERE r.property_id = p.id) AS "RoomList"`;
+
+const IMAGE_URLS_SQL = `(SELECT STRING_AGG(i.url, '|' ORDER BY i.is_cover DESC, i.sort_order)
+   FROM property_images i WHERE i.property_id = p.id) AS "ImageUrls"`;
 
 async function saveRooms(propertyId, rooms) {
   const pool = getPool();
-  await pool.request().input("p", sql.Int, propertyId)
-    .query("DELETE FROM dbo.PropertyRooms WHERE PropertyId = @p");
+  await pool.query("DELETE FROM property_rooms WHERE property_id = $1", [propertyId]);
   for (const room of rooms || []) {
     const qty = Number(room.count);
     if (!ROOM_TYPES.includes(room.type) || !Number.isInteger(qty) || qty < 1) continue;
-    await pool.request()
-      .input("p", sql.Int, propertyId)
-      .input("t", sql.NVarChar, room.type)
-      .input("q", sql.Int, qty)
-      .query("INSERT INTO dbo.PropertyRooms (PropertyId, RoomType, Quantity) VALUES (@p, @t, @q)");
+    await pool.query(
+      "INSERT INTO property_rooms (property_id, room_type, quantity) VALUES ($1, $2, $3)",
+      [propertyId, room.type, qty]
+    );
   }
+}
+
+function parseId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : null;
 }
 
 // Publike: lista (?ort=zuerich&tipi=rent&lokacioni=Zürich - Enge)
 router.get("/", async (req, res, next) => {
   try {
     const { lokacioni, tipi, ort } = req.query;
-    const rq = getPool().request();
-    const where = ["p.Visibility = 'public'"];
+    const params = [];
+    const add = (v) => { params.push(v); return `$${params.length}`; };
+    const where = ["p.visibility = 'public'"];
 
     if (ort) {
-      rq.input("ort", sql.NVarChar, ort);
-      rq.input("ortLike", sql.NVarChar, `%${ort}%`);
-      where.push(`(p.PlaceId = @ort OR p.CityId = @ort OR p.City LIKE @ortLike OR p.Neighborhood LIKE @ortLike OR p.Title LIKE @ortLike OR p.TitleEn LIKE @ortLike)`);
+      const exact = add(String(ort));
+      const like = add(`%${ort}%`);
+      where.push(`(p.place_id = ${exact} OR p.city_id = ${exact} OR p.city ILIKE ${like}
+        OR p.neighborhood ILIKE ${like} OR p.title ILIKE ${like} OR p.title_en ILIKE ${like})`);
     }
     if (lokacioni) {
-      String(lokacioni).split(" - ").forEach((part, i) => {
-        rq.input(`loc${i}`, sql.NVarChar, `%${part.trim()}%`);
-        where.push(`(p.City LIKE @loc${i} OR p.Neighborhood LIKE @loc${i} OR p.Address LIKE @loc${i})`);
+      String(lokacioni).split(" - ").forEach((part) => {
+        const like = add(`%${part.trim()}%`);
+        where.push(`(p.city ILIKE ${like} OR p.neighborhood ILIKE ${like} OR p.address ILIKE ${like})`);
       });
     }
-    if (tipi) { rq.input("tipi", sql.NVarChar, tipi); where.push("p.ListingType = @tipi"); }
+    if (tipi) where.push(`p.listing_type = ${add(String(tipi))}`);
 
-    const r = await rq.query(`
-      SELECT p.*, (SELECT TOP 1 Url FROM dbo.PropertyImages i
-                   WHERE i.PropertyId = p.Id ORDER BY i.IsCover DESC, i.SortOrder) AS CoverUrl,
-             ${roomListSql}
-      FROM dbo.Properties p
-      WHERE ${where.join(" AND ")}
-      ORDER BY p.CreatedAt DESC`);
-    res.json(r.recordset);
+    const r = await getPool().query(
+      `SELECT ${PROP_COLS}, ${COVER_SQL}, ${ROOM_LIST_SQL}
+       FROM properties p
+       WHERE ${where.join(" AND ")}
+       ORDER BY p.created_at DESC`,
+      params
+    );
+    res.json(r.rows);
   } catch (e) { next(e); }
 });
 
 router.get("/manage", requireUser, requireRole("admin"), async (req, res, next) => {
   try {
-    const r = await getPool().request().query(`
-      SELECT p.*,
-        (SELECT TOP 1 Url FROM dbo.PropertyImages i
-         WHERE i.PropertyId = p.Id ORDER BY i.IsCover DESC, i.SortOrder) AS CoverUrl,
-        STUFF((
-          SELECT '|' + i.Url FROM dbo.PropertyImages i
-          WHERE i.PropertyId = p.Id
-          ORDER BY i.IsCover DESC, i.SortOrder
-          FOR XML PATH(''), TYPE
-        ).value('.', 'nvarchar(max)'), 1, 1, '') AS ImageUrls,
-        ${roomListSql}
-      FROM dbo.Properties p
-      ORDER BY p.CreatedAt DESC`);
-    res.json(r.recordset);
+    const r = await getPool().query(
+      `SELECT ${PROP_COLS}, ${COVER_SQL}, ${IMAGE_URLS_SQL}, ${ROOM_LIST_SQL}
+       FROM properties p
+       ORDER BY p.created_at DESC`
+    );
+    res.json(r.rows);
   } catch (e) { next(e); }
 });
 
 // Publike: një pronë me të gjitha fotot
 router.get("/:id", async (req, res, next) => {
   try {
+    const id = parseId(req.params.id);
+    if (!id) return res.status(404).json({ error: "Prona nuk u gjet." });
     const pool = getPool();
-    const p = await pool.request().input("id", sql.Int, req.params.id)
-      .query("SELECT * FROM dbo.Properties WHERE Id = @id");
-    if (!p.recordset.length || p.recordset[0].Visibility === "private") {
+    const p = await pool.query(`SELECT ${PROP_COLS} FROM properties p WHERE p.id = $1`, [id]);
+    if (!p.rows.length || p.rows[0].Visibility === "private") {
       return res.status(404).json({ error: "Prona nuk u gjet." });
     }
-    const imgs = await pool.request().input("id", sql.Int, req.params.id)
-      .query("SELECT Id, Url, IsCover FROM dbo.PropertyImages WHERE PropertyId = @id ORDER BY IsCover DESC, SortOrder");
-    const rooms = await pool.request().input("id", sql.Int, req.params.id)
-      .query("SELECT RoomType, Quantity FROM dbo.PropertyRooms WHERE PropertyId = @id");
-    const row = p.recordset[0];
+    const imgs = await pool.query(
+      `SELECT id AS "Id", url AS "Url", is_cover AS "IsCover"
+       FROM property_images WHERE property_id = $1
+       ORDER BY is_cover DESC, sort_order`,
+      [id]
+    );
+    const rooms = await pool.query(
+      `SELECT room_type AS "RoomType", quantity AS "Quantity"
+       FROM property_rooms WHERE property_id = $1`,
+      [id]
+    );
+    const row = p.rows[0];
     const point = await resolvePoint(row);
-    res.json({ ...row, Lat: point?.lat ?? row.Lat, Lng: point?.lng ?? row.Lng, images: imgs.recordset, rooms: rooms.recordset });
+    res.json({
+      ...row,
+      Lat: point?.lat ?? row.Lat,
+      Lng: point?.lng ?? row.Lng,
+      images: imgs.rows,
+      rooms: rooms.rows,
+    });
   } catch (e) { next(e); }
 });
 
-function bindProperty(rq, b) {
-  return rq
-    .input("title", sql.NVarChar, b.title)
-    .input("titleEn", sql.NVarChar, b.titleEn ?? null)
-    .input("desc", sql.NVarChar, b.description ?? null)
-    .input("price", sql.Decimal(12, 2), b.price)
-    .input("ltype", sql.NVarChar, b.listingType ?? "sale")
-    .input("area", sql.Decimal(8, 2), b.areaM2 ?? null)
-    .input("rooms", sql.Int, b.rooms ?? null)
-    .input("city", sql.NVarChar, b.city)
-    .input("cityId", sql.NVarChar, b.cityId ?? null)
-    .input("hood", sql.NVarChar, b.neighborhood ?? null)
-    .input("placeId", sql.NVarChar, b.placeId ?? null)
-    .input("addr", sql.NVarChar, b.address ?? null)
-    .input("lat", sql.Decimal(9, 6), b.lat ?? null)
-    .input("lng", sql.Decimal(9, 6), b.lng ?? null)
-    .input("status", sql.NVarChar, STATUSES.includes(b.status) ? b.status : "available")
-    .input("visibility", sql.NVarChar, VISIBILITIES.includes(b.visibility) ? b.visibility : "public");
+// 16 vlerat e përbashkëta për INSERT dhe UPDATE
+function propertyValues(b) {
+  return [
+    b.title,
+    b.titleEn ?? null,
+    b.description ?? null,
+    b.price,
+    b.listingType ?? "sale",
+    b.areaM2 ?? null,
+    b.rooms ?? null,
+    b.city,
+    b.cityId ?? null,
+    b.neighborhood ?? null,
+    b.placeId ?? null,
+    b.address ?? null,
+    b.lat ?? null,
+    b.lng ?? null,
+    STATUSES.includes(b.status) ? b.status : "available",
+    VISIBILITIES.includes(b.visibility) ? b.visibility : "public",
+  ];
 }
 
 function invalidProperty(b) {
@@ -192,44 +216,49 @@ router.post("/", requireUser, requireRole("admin"), async (req, res, next) => {
     const b = req.body;
     if (invalidProperty(b))
       return res.status(400).json({ error: "Titulli, çmimi dhe qyteti janë të detyrueshëm." });
-    const r = await bindProperty(getPool().request(), b)
-      .input("owner", sql.Int, req.user.id)
-      .query(`INSERT INTO dbo.Properties
-        (OwnerId,Title,TitleEn,Description,Price,ListingType,AreaM2,Rooms,City,CityId,Neighborhood,PlaceId,Address,Lat,Lng,Status,Visibility)
-        OUTPUT INSERTED.Id
-        VALUES (@owner,@title,@titleEn,@desc,@price,@ltype,@area,@rooms,@city,@cityId,@hood,@placeId,@addr,@lat,@lng,@status,@visibility)`);
-    await saveRooms(r.recordset[0].Id, b.roomCounts);
-    res.status(201).json({ id: r.recordset[0].Id });
+    const r = await getPool().query(
+      `INSERT INTO properties
+        (owner_id, title, title_en, description, price, listing_type, area_m2, rooms,
+         city, city_id, neighborhood, place_id, address, lat, lng, status, visibility)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+       RETURNING id AS "Id"`,
+      [req.user.id, ...propertyValues(b)]
+    );
+    await saveRooms(r.rows[0].Id, b.roomCounts);
+    res.status(201).json({ id: r.rows[0].Id });
   } catch (e) { next(e); }
 });
 
 router.put("/:id", requireUser, requireRole("admin"), async (req, res, next) => {
   try {
+    const id = parseId(req.params.id);
+    if (!id) return res.status(404).json({ error: "Prona nuk u gjet." });
     const b = req.body;
     if (invalidProperty(b))
       return res.status(400).json({ error: "Titulli, çmimi dhe qyteti janë të detyrueshëm." });
-    const r = await bindProperty(getPool().request(), b)
-      .input("id", sql.Int, req.params.id)
-      .query(`UPDATE dbo.Properties SET
-        Title=@title, TitleEn=@titleEn, Description=@desc, Price=@price, ListingType=@ltype,
-        AreaM2=@area, Rooms=@rooms, City=@city, CityId=@cityId, Neighborhood=@hood,
-        PlaceId=@placeId, Address=@addr, Lat=@lat, Lng=@lng, Status=@status, Visibility=@visibility
-        OUTPUT INSERTED.Id
-        WHERE Id=@id`);
-    if (!r.recordset.length) return res.status(404).json({ error: "Prona nuk u gjet." });
-    await saveRooms(r.recordset[0].Id, b.roomCounts);
-    res.json({ id: r.recordset[0].Id });
+    const r = await getPool().query(
+      `UPDATE properties SET
+        title=$1, title_en=$2, description=$3, price=$4, listing_type=$5,
+        area_m2=$6, rooms=$7, city=$8, city_id=$9, neighborhood=$10,
+        place_id=$11, address=$12, lat=$13, lng=$14, status=$15, visibility=$16
+       WHERE id=$17
+       RETURNING id AS "Id"`,
+      [...propertyValues(b), id]
+    );
+    if (!r.rows.length) return res.status(404).json({ error: "Prona nuk u gjet." });
+    await saveRooms(r.rows[0].Id, b.roomCounts);
+    res.json({ id: r.rows[0].Id });
   } catch (e) { next(e); }
 });
 
 router.delete("/:id", requireUser, requireRole("admin"), async (req, res, next) => {
   try {
+    const id = parseId(req.params.id);
+    if (!id) return res.status(404).json({ error: "Prona nuk u gjet." });
     const pool = getPool();
-    await pool.request().input("id", sql.Int, req.params.id)
-      .query("DELETE FROM dbo.Issues WHERE PropertyId = @id");
-    const r = await pool.request().input("id", sql.Int, req.params.id)
-      .query("DELETE FROM dbo.Properties OUTPUT DELETED.Id WHERE Id = @id");
-    if (!r.recordset.length) return res.status(404).json({ error: "Prona nuk u gjet." });
+    await pool.query("DELETE FROM issues WHERE property_id = $1", [id]);
+    const r = await pool.query("DELETE FROM properties WHERE id = $1 RETURNING id", [id]);
+    if (!r.rows.length) return res.status(404).json({ error: "Prona nuk u gjet." });
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

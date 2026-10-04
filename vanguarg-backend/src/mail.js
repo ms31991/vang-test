@@ -97,13 +97,14 @@ export async function notifyChatMessage({ senderId, receiverId, staff, body }) {
     return;
   }
 
-  const people = await getPool().request()
-    .input("s", sql.Int, senderId)
-    .input("r", sql.Int, receiverId)
-    .query("SELECT Id, FullName, Email, Role FROM dbo.Users WHERE Id = @s OR Id = @r");
-  const sender = people.recordset.find((row) => Number(row.Id) === Number(senderId));
-  const receiver = people.recordset.find((row) => Number(row.Id) === Number(receiverId));
-  const who = (sender?.FullName && String(sender.FullName).trim())
+  const people = await getPool().query(
+    `SELECT id AS "Id", full_name AS "FullName", email AS "Email", role AS "Role"
+     FROM users WHERE id = $1 OR id = $2`,
+    [senderId, receiverId]
+  );
+  const sender = people.rows.find((row) => Number(row.Id) === Number(senderId));
+  const receiver = people.rows.find((row) => Number(row.Id) === Number(receiverId));
+    const who = (sender?.FullName && String(sender.FullName).trim())
     || (sender?.Email && String(sender.Email).trim())
     || "Dikush";
   const preview = String(body || "").trim().slice(0, 500);

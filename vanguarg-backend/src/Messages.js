@@ -1,5 +1,5 @@
 import { Router } from "express";
-import sql from 'mssql';import { getPool } from "./db.js";
+import { getPool } from "./db.js";
 import { requireUser } from "./Auth.js";
 import { notifyChatMessage } from "./mail.js";
 import { notePresence } from "./presence.js";
@@ -28,12 +28,13 @@ function displayName(row) {
 }
 
 async function supportAccount(pool) {
-  const r = await pool.request().query(`
-    SELECT TOP 1 Id, FullName, Email, Role
-    FROM dbo.Users
-    WHERE Role IN ('admin', 'owner')
-    ORDER BY CASE Role WHEN 'admin' THEN 0 ELSE 1 END, Id`);
-  return r.recordset[0] || null;
+  const r = await pool.query(`
+    SELECT id AS "Id", full_name AS "FullName", email AS "Email", role AS "Role"
+    FROM users
+    WHERE role IN ('admin', 'owner')
+    ORDER BY CASE role WHEN 'admin' THEN 0 ELSE 1 END, id
+    LIMIT 1`);
+  return r.rows[0] || null;
 }
 
 router.get("/conversations", async (req, res, next) => {
@@ -42,61 +43,65 @@ router.get("/conversations", async (req, res, next) => {
     if (!isStaff(req.user)) {
       const support = await supportAccount(pool);
       if (!support) return res.status(500).json({ error: "Nuk ka support." });
-      const last = await pool.request()
-        .input("me", sql.Int, req.user.id)
-        .input("support", sql.Int, userId(support.Id))
-        .query(`
-          SELECT TOP 1 Body, SentAt
-          FROM dbo.Messages
-          WHERE (SenderId = @me AND ReceiverId = @support)
-             OR (SenderId = @support AND ReceiverId = @me)
-          ORDER BY SentAt DESC, Id DESC`);
-      const unread = await pool.request()
-        .input("me", sql.Int, req.user.id)
-        .input("support", sql.Int, userId(support.Id))
-        .query(`
-          SELECT COUNT(*) AS Unread
-          FROM dbo.Messages
-          WHERE SenderId = @support AND ReceiverId = @me AND IsRead = 0`);
-      const latest = last.recordset[0];
+      const supportId = userId(support.Id);
+
+      const last = await pool.query(
+        `SELECT body AS "Body", sent_at AS "SentAt"
+         FROM messages
+         WHERE (sender_id = $1 AND receiver_id = $2)
+            OR (sender_id = $2 AND receiver_id = $1)
+         ORDER BY sent_at DESC, id DESC
+         LIMIT 1`,
+        [req.user.id, supportId]
+      );
+      const unread = await pool.query(
+        `SELECT COUNT(*)::int AS "Unread"
+         FROM messages
+         WHERE sender_id = $2 AND receiver_id = $1 AND is_read = false`,
+        [req.user.id, supportId]
+      );
+      const latest = last.rows[0];
       return res.json([{
-        id: userId(support.Id),
+        id: supportId,
         name: "Support",
         lastBody: latest?.Body || null,
         lastAt: latest?.SentAt || null,
-        unread: unread.recordset[0]?.Unread || 0,
+        unread: unread.rows[0]?.Unread || 0,
       }]);
     }
 
-    const r = await pool.request()
-      .input("me", sql.Int, req.user.id)
-      .query(`
-        SELECT
-          other.Id,
-          other.FullName,
-          other.Email,
-          lastMsg.Body AS LastBody,
-          lastMsg.SentAt AS LastAt,
-          (
-            SELECT COUNT(*)
-            FROM dbo.Messages unread
-            WHERE unread.SenderId = other.Id
-              AND unread.ReceiverId = @me
-              AND unread.IsRead = 0
-          ) AS Unread
-        FROM dbo.Users other
-        JOIN (
-          SELECT
-            CASE WHEN m.SenderId = @me THEN m.ReceiverId ELSE m.SenderId END AS OtherId,
-            MAX(m.Id) AS LastId
-          FROM dbo.Messages m
-          WHERE m.SenderId = @me OR m.ReceiverId = @me
-          GROUP BY CASE WHEN m.SenderId = @me THEN m.ReceiverId ELSE m.SenderId END
-        ) pairs ON pairs.OtherId = other.Id
-        JOIN dbo.Messages lastMsg ON lastMsg.Id = pairs.LastId
-        ORDER BY lastMsg.SentAt DESC`);
+    const r = await pool.query(
+      `SELECT
+         other.id AS "Id",
+         other.full_name AS "FullName",
+         other.email AS "Email",
+         lastMsg.body AS "LastBody",
+         lastMsg.sent_at AS "LastAt",
+         (
+           SELECT COUNT(*)::int
+           FROM messages unread
+           WHERE unread.sender_id = other.id
+             AND unread.receiver_id = $1
+             AND unread.is_read = false
+         ) AS "Unread"
+       FROM users other
+       JOIN (
+         SELECT other_id, MAX(id) AS last_id
+         FROM (
+           SELECT
+             CASE WHEN m.sender_id = $1 THEN m.receiver_id ELSE m.sender_id END AS other_id,
+             m.id
+           FROM messages m
+           WHERE m.sender_id = $1 OR m.receiver_id = $1
+         ) t
+         GROUP BY other_id
+       ) pairs ON pairs.other_id = other.id
+       JOIN messages lastMsg ON lastMsg.id = pairs.last_id
+       ORDER BY lastMsg.sent_at DESC`,
+      [req.user.id]
+    );
 
-    res.json(r.recordset.map((row) => ({
+    res.json(r.rows.map((row) => ({
       id: userId(row.Id),
       name: displayName(row),
       email: row.Email || null,
@@ -123,36 +128,36 @@ router.get("/with/:userId", async (req, res, next) => {
       return res.status(400).json({ error: "Biseda nuk është e vlefshme." });
     }
 
-    const person = await pool.request()
-      .input("id", sql.Int, otherId)
-      .query("SELECT Id, FullName, Email FROM dbo.Users WHERE Id = @id");
-    const peer = person.recordset[0];
+    const person = await pool.query(
+      `SELECT id AS "Id", full_name AS "FullName", email AS "Email"
+       FROM users WHERE id = $1`,
+      [otherId]
+    );
+    const peer = person.rows[0];
     if (!peer) return res.status(404).json({ error: "Përdoruesi nuk u gjet." });
 
-    await pool.request()
-      .input("me", sql.Int, req.user.id)
-      .input("other", sql.Int, otherId)
-      .query(`
-        UPDATE dbo.Messages
-        SET IsRead = 1
-        WHERE SenderId = @other AND ReceiverId = @me AND IsRead = 0`);
+    await pool.query(
+      `UPDATE messages
+       SET is_read = true
+       WHERE sender_id = $2 AND receiver_id = $1 AND is_read = false`,
+      [req.user.id, otherId]
+    );
 
-    const r = await pool.request()
-      .input("me", sql.Int, req.user.id)
-      .input("other", sql.Int, otherId)
-      .query(`
-        SELECT Id, Body, SenderId, SentAt
-        FROM dbo.Messages
-        WHERE (SenderId = @me AND ReceiverId = @other)
-           OR (SenderId = @other AND ReceiverId = @me)
-        ORDER BY SentAt ASC, Id ASC`);
+    const r = await pool.query(
+      `SELECT id AS "Id", body AS "Body", sender_id AS "SenderId", sent_at AS "SentAt"
+       FROM messages
+       WHERE (sender_id = $1 AND receiver_id = $2)
+          OR (sender_id = $2 AND receiver_id = $1)
+       ORDER BY sent_at ASC, id ASC`,
+      [req.user.id, otherId]
+    );
 
     res.json({
       peer: {
         id: peer.Id,
         name: isStaff(req.user) ? displayName(peer) : "Support",
       },
-      messages: r.recordset.map((row) => ({
+      messages: r.rows.map((row) => ({
         id: row.Id,
         body: row.Body,
         mine: userId(row.SenderId) === userId(req.user.id),
@@ -165,15 +170,25 @@ router.get("/with/:userId", async (req, res, next) => {
 router.get("/", async (req, res, next) => {
   try {
     const seesAll = isStaff(req.user);
-    const rq = getPool().request().input("me", sql.Int, req.user.id);
-    const r = await rq.query(`
-      SELECT m.*, s.FullName AS SenderName, rc.FullName AS ReceiverName
-      FROM dbo.Messages m
-      JOIN dbo.Users s ON s.Id = m.SenderId
-      JOIN dbo.Users rc ON rc.Id = m.ReceiverId
-      ${seesAll ? "" : "WHERE m.SenderId = @me OR m.ReceiverId = @me"}
-      ORDER BY m.SentAt DESC`);
-    res.json(r.recordset);
+    const r = await getPool().query(
+      `SELECT
+         m.id AS "Id",
+         m.sender_id AS "SenderId",
+         m.receiver_id AS "ReceiverId",
+         m.property_id AS "PropertyId",
+         m.body AS "Body",
+         m.sent_at AS "SentAt",
+         m.is_read AS "IsRead",
+         s.full_name AS "SenderName",
+         rc.full_name AS "ReceiverName"
+       FROM messages m
+       JOIN users s ON s.id = m.sender_id
+       JOIN users rc ON rc.id = m.receiver_id
+       ${seesAll ? "" : "WHERE m.sender_id = $1 OR m.receiver_id = $1"}
+       ORDER BY m.sent_at DESC`,
+      seesAll ? [] : [req.user.id]
+    );
+    res.json(r.rows);
   } catch (e) { next(e); }
 });
 
@@ -198,29 +213,23 @@ router.post("/", async (req, res, next) => {
       return res.status(400).json({ error: "Marrësi nuk është i vlefshëm." });
     }
 
-    const exists = await pool.request()
-      .input("id", sql.Int, receiver)
-      .query("SELECT Id FROM dbo.Users WHERE Id = @id");
-    if (!exists.recordset.length) return res.status(404).json({ error: "Përdoruesi nuk u gjet." });
+    const exists = await pool.query("SELECT id FROM users WHERE id = $1", [receiver]);
+    if (!exists.rows.length) return res.status(404).json({ error: "Përdoruesi nuk u gjet." });
 
     let propertyId = Number(req.body?.propertyId);
     if (!propertyId || isStaff(req.user)) propertyId = null;
     else {
-      const property = await pool.request()
-        .input("id", sql.Int, propertyId)
-        .query("SELECT Id FROM dbo.Properties WHERE Id = @id");
-      if (!property.recordset.length) propertyId = null;
+      const property = await pool.query("SELECT id FROM properties WHERE id = $1", [propertyId]);
+      if (!property.rows.length) propertyId = null;
     }
 
-    const r = await pool.request()
-      .input("s", sql.Int, req.user.id)
-      .input("r", sql.Int, receiver)
-      .input("p", sql.Int, propertyId)
-      .input("b", sql.NVarChar, text)
-      .query(`INSERT INTO dbo.Messages (SenderId, ReceiverId, PropertyId, Body)
-              OUTPUT INSERTED.Id, INSERTED.Body, INSERTED.SenderId, INSERTED.SentAt
-              VALUES (@s, @r, @p, @b)`);
-    const row = r.recordset[0];
+    const r = await pool.query(
+      `INSERT INTO messages (sender_id, receiver_id, property_id, body)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id AS "Id", body AS "Body", sender_id AS "SenderId", sent_at AS "SentAt"`,
+      [req.user.id, receiver, propertyId, text]
+    );
+    const row = r.rows[0];
     notifyChatMessage({
       senderId: req.user.id,
       receiverId: receiver,

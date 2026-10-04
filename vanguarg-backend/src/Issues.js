@@ -1,22 +1,37 @@
 import { Router } from "express";
-import sql from 'mssql';import { getPool } from "./db.js";
+import { getPool } from "./db.js";
 import { requireUser, requireRole } from "./Auth.js";
 
 const router = Router();
 router.use(requireUser);
 
+// Kolonat e issues me emrat që pret frontend-i (PascalCase)
+const ISSUE_COLS = `
+  i.id AS "Id",
+  i.client_id AS "ClientId",
+  i.property_id AS "PropertyId",
+  i.category AS "Category",
+  i.description AS "Description",
+  i.status AS "Status",
+  i.created_at AS "CreatedAt",
+  i.resolved_at AS "ResolvedAt"`;
+
 // Klienti sheh raportet e veta; owner i sheh të gjitha
 router.get("/", async (req, res, next) => {
   try {
     const seesAll = req.user.role === "owner" || req.user.role === "admin";
-    const r = await getPool().request().input("me", sql.Int, req.user.id).query(`
-      SELECT i.*, p.Title AS PropertyTitle, u.FullName AS ClientName
-      FROM dbo.Issues i
-      JOIN dbo.Properties p ON p.Id = i.PropertyId
-      JOIN dbo.Users u ON u.Id = i.ClientId
-      ${seesAll ? "" : "WHERE i.ClientId = @me"}
-      ORDER BY i.CreatedAt DESC`);
-    res.json(r.recordset);
+    const r = await getPool().query(
+      `SELECT ${ISSUE_COLS},
+              p.title AS "PropertyTitle",
+              u.full_name AS "ClientName"
+       FROM issues i
+       JOIN properties p ON p.id = i.property_id
+       JOIN users u ON u.id = i.client_id
+       ${seesAll ? "" : "WHERE i.client_id = $1"}
+       ORDER BY i.created_at DESC`,
+      seesAll ? [] : [req.user.id]
+    );
+    res.json(r.rows);
   } catch (e) { next(e); }
 });
 
@@ -27,17 +42,22 @@ router.post("/", async (req, res, next) => {
     if (!propertyId || !category || !description)
       return res.status(400).json({ error: "Plotëso të gjitha fushat." });
     const pool = getPool();
-    const p = await pool.request().input("id", sql.Int, propertyId)
-      .query("SELECT ClientId FROM dbo.Properties WHERE Id = @id");
-    if (p.recordset[0]?.ClientId !== req.user.id)
+    const p = await pool.query(
+      "SELECT client_id FROM properties WHERE id = $1",
+      [propertyId]
+    );
+    if (Number(p.rows[0]?.client_id) !== req.user.id)
       return res.status(403).json({ error: "Kjo banesë nuk është e lidhur me llogarinë tënde." });
 
-    const r = await pool.request()
-      .input("c", sql.Int, req.user.id).input("p", sql.Int, propertyId)
-      .input("cat", sql.NVarChar, category).input("d", sql.NVarChar, description)
-      .query(`INSERT INTO dbo.Issues (ClientId,PropertyId,Category,Description)
-              OUTPUT INSERTED.* VALUES (@c,@p,@cat,@d)`);
-    res.status(201).json(r.recordset[0]);
+    const r = await pool.query(
+      `INSERT INTO issues (client_id, property_id, category, description)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id AS "Id", client_id AS "ClientId", property_id AS "PropertyId",
+                 category AS "Category", description AS "Description",
+                 status AS "Status", created_at AS "CreatedAt", resolved_at AS "ResolvedAt"`,
+      [req.user.id, propertyId, category, description]
+    );
+    res.status(201).json(r.rows[0]);
   } catch (e) { next(e); }
 });
 
@@ -47,11 +67,13 @@ router.patch("/:id/status", requireRole("owner", "admin"), async (req, res, next
     const { status } = req.body;
     if (!["new", "in_progress", "resolved"].includes(status))
       return res.status(400).json({ error: "Status i pavlefshëm." });
-    await getPool().request()
-      .input("id", sql.Int, req.params.id).input("s", sql.NVarChar, status)
-      .query(`UPDATE dbo.Issues SET Status=@s,
-              ResolvedAt = CASE WHEN @s='resolved' THEN SYSUTCDATETIME() ELSE NULL END
-              WHERE Id=@id`);
+    await getPool().query(
+      `UPDATE issues
+       SET status = $1::text,
+           resolved_at = CASE WHEN $1::text = 'resolved' THEN NOW() ELSE NULL END
+       WHERE id = $2`,
+      [status, req.params.id]
+    );
     res.json({ ok: true });
   } catch (e) { next(e); }
 });

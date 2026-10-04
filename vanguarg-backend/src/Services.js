@@ -1,5 +1,5 @@
 import { Router } from "express";
-import sql from 'mssql';import { getPool } from "./db.js";
+import { getPool } from "./db.js";
 import { requireUser, requireRole } from "./Auth.js";
 
 const router = Router();
@@ -25,46 +25,39 @@ function mapRow(row) {
   };
 }
 
+const INSERT_SQL = `INSERT INTO services (sort_order, title_de, title_en, text_de, text_en)
+                    VALUES ($1, $2, $3, $4, $5)`;
+
 async function ensureServices() {
   const pool = getPool();
-  const created = await pool.request().query(`
-    IF OBJECT_ID('dbo.Services','U') IS NULL
-    BEGIN
-      CREATE TABLE dbo.Services (
-        Id        INT IDENTITY(1,1) PRIMARY KEY,
-        SortOrder INT NOT NULL,
-        TitleDe   NVARCHAR(160) NOT NULL,
-        TitleEn   NVARCHAR(160) NOT NULL,
-        TextDe    NVARCHAR(800) NOT NULL,
-        TextEn    NVARCHAR(800) NOT NULL
-      );
-      SELECT 1 AS created;
-    END
-    ELSE SELECT 0 AS created;
-  `);
-  if (!created.recordset[0]?.created) return;
+  const exists = await pool.query("SELECT to_regclass('public.services') IS NOT NULL AS exists");
+  if (exists.rows[0].exists) return;
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS services (
+      id         INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+      sort_order INTEGER NOT NULL,
+      title_de   VARCHAR(160) NOT NULL,
+      title_en   VARCHAR(160) NOT NULL,
+      text_de    VARCHAR(800) NOT NULL,
+      text_en    VARCHAR(800) NOT NULL
+    )`);
 
   for (let i = 0; i < DEFAULTS.length; i += 1) {
     const [titleDe, titleEn, textDe, textEn] = DEFAULTS[i];
-    await pool.request()
-      .input("sort", sql.Int, i)
-      .input("titleDe", sql.NVarChar, titleDe)
-      .input("titleEn", sql.NVarChar, titleEn)
-      .input("textDe", sql.NVarChar, textDe)
-      .input("textEn", sql.NVarChar, textEn)
-      .query(`INSERT INTO dbo.Services (SortOrder, TitleDe, TitleEn, TextDe, TextEn)
-              VALUES (@sort, @titleDe, @titleEn, @textDe, @textEn)`);
+    await pool.query(INSERT_SQL, [i, titleDe, titleEn, textDe, textEn]);
   }
 }
 
 async function listServices() {
   await ensureServices();
-  const rows = await getPool().request().query(`
-    SELECT Id, TitleDe, TitleEn, TextDe, TextEn
-    FROM dbo.Services
-    ORDER BY SortOrder, Id
+  const rows = await getPool().query(`
+    SELECT id AS "Id", title_de AS "TitleDe", title_en AS "TitleEn",
+           text_de AS "TextDe", text_en AS "TextEn"
+    FROM services
+    ORDER BY sort_order, id
   `);
-  return rows.recordset.map(mapRow);
+  return rows.rows.map(mapRow);
 }
 
 router.get("/", async (_req, res, next) => {
@@ -91,26 +84,20 @@ router.put("/", requireUser, requireRole("admin"), async (req, res, next) => {
     }
 
     await ensureServices();
-    const pool = getPool();
-    const tx = new sql.Transaction(pool);
-    await tx.begin();
+    const client = await getPool().connect();
     try {
-      await new sql.Request(tx).query("DELETE FROM dbo.Services");
+      await client.query("BEGIN");
+      await client.query("DELETE FROM services");
       for (let i = 0; i < clean.length; i += 1) {
         const item = clean[i];
-        await new sql.Request(tx)
-          .input("sort", sql.Int, i)
-          .input("titleDe", sql.NVarChar, item.titleDe)
-          .input("titleEn", sql.NVarChar, item.titleEn)
-          .input("textDe", sql.NVarChar, item.textDe)
-          .input("textEn", sql.NVarChar, item.textEn)
-          .query(`INSERT INTO dbo.Services (SortOrder, TitleDe, TitleEn, TextDe, TextEn)
-                  VALUES (@sort, @titleDe, @titleEn, @textDe, @textEn)`);
+        await client.query(INSERT_SQL, [i, item.titleDe, item.titleEn, item.textDe, item.textEn]);
       }
-      await tx.commit();
+      await client.query("COMMIT");
     } catch (error) {
-      await tx.rollback();
+      await client.query("ROLLBACK");
       throw error;
+    } finally {
+      client.release();
     }
     res.json(await listServices());
   } catch (error) {
