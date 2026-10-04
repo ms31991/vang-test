@@ -14,5 +14,5 @@ export async function initDb() {
     );
   `);
 
-  console.log("✅ Database tables initialized");
+  console.log("✅ users table initialized");
 }
