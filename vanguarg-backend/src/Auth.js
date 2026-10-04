@@ -1,4 +1,4 @@
-import sql from "mssql/msnodesqlv8.js";
+import sql from 'mssql';
 import { clerkClient } from "@clerk/express";
 import { getPool } from "./db.js";
 import { clerkUserIdFromRequest } from "./session.js";

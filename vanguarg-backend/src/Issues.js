@@ -1,6 +1,5 @@
 import { Router } from "express";
-import sql from "mssql/msnodesqlv8.js";
-import { getPool } from "./db.js";
+import sql from 'mssql';import { getPool } from "./db.js";
 import { requireUser, requireRole } from "./Auth.js";
 
 const router = Router();

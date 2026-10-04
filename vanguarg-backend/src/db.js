@@ -1,5 +1,4 @@
-import sql from "mssql/msnodesqlv8.js";
-
+import sql from 'mssql';
 const connectionString =
   "Driver={ODBC Driver 17 for SQL Server};Server=DESKTOP-QEJK40H;Database=VanguardDB;Trusted_Connection=Yes;TrustServerCertificate=Yes;";
 

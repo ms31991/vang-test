@@ -3,8 +3,7 @@ import multer from "multer";
 import path from "node:path";
 import fs from "node:fs";
 import crypto from "node:crypto";
-import sql from "mssql/msnodesqlv8.js";
-import { getPool } from "./db.js";
+import sql from 'mssql';import { getPool } from "./db.js";
 import { requireUser, requireRole } from "./Auth.js";
 
 export const UPLOAD_DIR = path.resolve("uploads");

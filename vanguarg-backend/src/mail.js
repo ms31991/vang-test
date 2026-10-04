@@ -1,6 +1,5 @@
 import nodemailer from "nodemailer";
-import sql from "mssql/msnodesqlv8.js";
-import { getPool } from "./db.js";
+import sql from 'mssql';import { getPool } from "./db.js";
 import { isChatOpen } from "./presence.js";
 
 const ADMIN = "mehmetalishabani04@gmail.com";
