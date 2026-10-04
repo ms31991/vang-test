@@ -9,18 +9,18 @@ router.get(
   requireUser,
   async (_req, res, next) => {
     try {
-      const r = await getPool().request().query(`
+      const r = await getPool().query(`
         SELECT
-          Id,
-          FullName,
-          Email,
-          Role,
-          CreatedAt
-        FROM dbo.Users
-        ORDER BY CreatedAt DESC
+          id AS "Id",
+          full_name AS "FullName",
+          email AS "Email",
+          role AS "Role",
+          created_at AS "CreatedAt"
+        FROM users
+        ORDER BY created_at DESC
       `);
 
-      res.json(r.recordset);
+      res.json(r.rows);
     } catch (e) {
       next(e);
     }
