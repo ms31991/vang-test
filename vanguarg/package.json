@@ -22,5 +22,12 @@
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
     "vite": "^8.3.0"
-  }
+  },
+  
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "https://vang-test.onrender.com/api/:path*" },
+    { "source": "/uploads/:path*", "destination": "https://vang-test.onrender.com/uploads/:path*" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+
 }
