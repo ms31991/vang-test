@@ -20,7 +20,7 @@ export default function Banner() {
         <p className="banner-text">{t("bannerText")}</p>
 
 
-        <Link to="/pronat" className="banner-cta">
+        <Link to="/immobilien" className="banner-cta">
           {t("bannerCta")}
         </Link>
       </div>

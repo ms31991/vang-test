@@ -68,7 +68,7 @@ function graph(origin, jsonLd) {
           inLanguage: ["de-CH", "en"],
           potentialAction: {
             "@type": "SearchAction",
-            target: `${origin}/pronat?ort={search_term_string}`,
+            target: `${origin}/immobilien?ort={search_term_string}`,
             "query-input": "required name=search_term_string",
           },
         },
@@ -84,14 +84,14 @@ function graph(origin, jsonLd) {
       itemListElement: (jsonLd.items || []).map((item, index) => ({
         "@type": "ListItem",
         position: index + 1,
-        url: `${origin}/pronat/${item.id}`,
+        url: `${origin}/immobilien/${item.id}`,
         name: item.name,
       })),
     };
   }
 
   if (jsonLd.kind === "listing") {
-    const url = `${origin}/pronat/${jsonLd.id}`;
+    const url = `${origin}/immobilien/${jsonLd.id}`;
     const available = jsonLd.status === "available";
     return {
       "@context": "https://schema.org",
@@ -100,7 +100,7 @@ function graph(origin, jsonLd) {
           "@type": "BreadcrumbList",
           itemListElement: [
             { "@type": "ListItem", position: 1, name: "Vanguard", item: `${origin}/` },
-            { "@type": "ListItem", position: 2, name: jsonLd.listName, item: `${origin}/pronat` },
+            { "@type": "ListItem", position: 2, name: jsonLd.listName, item: `${origin}/immobilien` },
             { "@type": "ListItem", position: 3, name: jsonLd.name, item: url },
           ],
         },

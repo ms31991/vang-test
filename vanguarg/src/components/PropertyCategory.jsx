@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import PropertiesCard from "./PropertiesCard";
 
-export default function PropertyCategory({ id, title, items, empty, action, cycle = false }) {
+export default function PropertyCategory({ id, title, items, empty, action, cycle = false, navigate = false }) {
   const [list, setList] = useState(items);
   const [sliding, setSliding] = useState(false);
 
@@ -98,7 +98,7 @@ export default function PropertyCategory({ id, title, items, empty, action, cycl
           <div className={`home-carousel-track${sliding ? " sliding" : ""}`}>
             {list.map((property, index) => (
               <div className="home-carousel-item" key={`${property.id}-${index}`}>
-                <PropertiesCard property={property} onClick={handleCardClick} />
+                <PropertiesCard property={property} onClick={handleCardClick} navigate={navigate} />
               </div>
             ))}
           </div>
@@ -106,7 +106,7 @@ export default function PropertyCategory({ id, title, items, empty, action, cycl
       ) : items.length ? (
         <div className="property-grid">
           {items.map((property) => (
-            <PropertiesCard key={property.id} property={property} />
+            <PropertiesCard key={property.id} property={property} navigate={navigate} />
           ))}
         </div>
       ) : (

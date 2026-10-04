@@ -7,7 +7,7 @@ export default function Inbox() {
   usePageSeo({
     title: `${t("navSupport")} | Vanguard`,
     description: t("chatLead"),
-    path: "/inbox",
+    path: "/posteingang",
     noindex: true,
   });
 

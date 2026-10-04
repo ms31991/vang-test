@@ -1,10 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@clerk/react";
 import PropertiesCard from "../components/PropertiesCard";
 import SupportChat from "../components/SupportChat";
 import { api, fromProperty } from "../api";
-import { localized } from "../data/properties";
 import { swissPlaces } from "../data/places";
 import { useLanguage } from "../i18n/LanguageContext";
 import { usePageSeo } from "../seo/usePageSeo";
@@ -36,12 +35,6 @@ const emptyForm = {
   area: "",
 };
 
-function roomFields(counts = {}) {
-  return Object.fromEntries(
-    ROOM_FIELDS.map(([type]) => [type, counts[type] ? String(counts[type]) : ""]),
-  );
-}
-
 const MAX_PHOTOS = 20;
 
 function toAdminProperty(row) {
@@ -57,7 +50,7 @@ const sections = [
   { id: "services", label: "adminNavServices" },
   { id: "users", label: "adminNavUsers" },
   { id: "messages", label: "adminNavMessages" },
-  { id: "issues", label: "adminNavIssues" },
+  // { id: "issues", label: "adminNavIssues" },
 ];
 
 const emptyService = { titleDe: "", titleEn: "", textDe: "", textEn: "" };
@@ -85,19 +78,20 @@ function placeFromLocation(location) {
 }
 
 export default function AdminPage() {
-  const { lang, t } = useLanguage();
+  const { t } = useLanguage();
   usePageSeo({
-    title: "Admin | Vanguard",
-    description: "Verwaltung der Immobilien.",
-    path: "/admin",
+    title: `${t("navAdmin")} | Vanguard`,
+    description: t("adminSeo"),
+    path: "/verwaltung",
     noindex: true,
   });
+  const navigate = useNavigate();
   const { isLoaded, isSignedIn, getToken } = useAuth();
   const [role, setRole] = useState("");
   const [section, setSection] = useState("properties");
   const [items, setItems] = useState([]);
   const [users, setUsers] = useState([]);
-  const [issues, setIssues] = useState([]);
+  // const [issues, setIssues] = useState([]);
   const [serviceItems, setServiceItems] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [showForm, setShowForm] = useState(false);
@@ -143,9 +137,9 @@ export default function AdminPage() {
         } else if (section === "users") {
           const rows = await api("/api/users", { token });
           if (!ignore) setUsers(rows);
-        } else if (section === "issues") {
-          const rows = await api("/api/issues", { token });
-          if (!ignore) setIssues(rows);
+        // } else if (section === "issues") {
+        //   const rows = await api("/api/issues", { token });
+        //   if (!ignore) setIssues(rows);
         } else if (section === "services") {
           const rows = await api("/api/services", { token });
           if (!ignore) setServiceItems(rows);
@@ -214,39 +208,9 @@ export default function AdminPage() {
     clearPhotos();
   }
 
-  async function startEdit(property) {
-    setEditingId(property.id);
-    setShowForm(true);
-    setForm({
-      title: localized(property.title, lang),
-      location: property.location,
-      price: String(property.price),
-      listingType: property.listingType,
-      status: property.status || "available",
-      visibility: property.visibility || "public",
-      rooms: property.rooms ? String(property.rooms) : "",
-      ...roomFields(property.roomCounts),
-      area: String(property.area ?? ""),
-    });
-    setMessage("");
-    clearPhotos();
-    setExistingPhotos((property.images || []).map((url, index) => ({ Id: `${url}-${index}`, Url: url })));
-    if (property.visibility === "private") return;
-    try {
-      const detail = await api(`/api/properties/${property.id}`);
-      const counts = Object.fromEntries(
-        (detail.rooms || []).map((room) => [room.RoomType, room.Quantity]),
-      );
-      setForm((current) => ({
-        ...current,
-        status: detail.Status || current.status,
-        visibility: detail.Visibility || current.visibility,
-        ...roomFields(counts),
-      }));
-      setExistingPhotos(detail.images || []);
-    } catch (error) {
-      setMessage(error.message);
-    }
+  // Redaktimi bëhet te faqja e vet: /verwaltung/bearbeiten/:id
+  function startEdit(property) {
+    navigate(`/verwaltung/bearbeiten/${property.id}`);
   }
 
   function cancelEdit() {
@@ -313,17 +277,17 @@ export default function AdminPage() {
     }
   }
 
-  async function changeIssueStatus(id, status) {
-    setMessage("");
-    try {
-      const token = await getToken();
-      await api(`/api/issues/${id}/status`, { method: "PATCH", token, body: { status } });
-      const rows = await api("/api/issues", { token });
-      setIssues(rows);
-    } catch (error) {
-      setMessage(error.message);
-    }
-  }
+  // async function changeIssueStatus(id, status) {
+  //   setMessage("");
+  //   try {
+  //     const token = await getToken();
+  //     await api(`/api/issues/${id}/status`, { method: "PATCH", token, body: { status } });
+  //     const rows = await api("/api/issues", { token });
+  //     setIssues(rows);
+  //   } catch (error) {
+  //     setMessage(error.message);
+  //   }
+  // }
 
   const roleLabel = {
     admin: t("roleAdmin"),
@@ -335,9 +299,9 @@ export default function AdminPage() {
     available: t("statusAvailable"),
     sold: t("statusSold"),
     rented: t("statusRented"),
-    new: t("statusNew"),
-    in_progress: t("statusProgress"),
-    resolved: t("statusResolved"),
+    // new: t("statusNew"),
+    // in_progress: t("statusProgress"),
+    // resolved: t("statusResolved"),
   };
 
   function updateService(index, field, value) {
@@ -368,23 +332,23 @@ export default function AdminPage() {
     services: t("adminNavServices"),
     users: t("adminUsersTitle"),
     messages: t("adminMessagesTitle"),
-    issues: t("adminIssuesTitle"),
+    // issues: t("adminIssuesTitle"),
   };
 
   return (
     <section className="section admin">
-      <div className="section-head">
+      <header className="admin-top">
         <div>
-          <p className="eyebrow">{t("navAdmin")}</p>
-          <h1>{t("adminTitle")}</h1>
+          <p className="admin-eyebrow">Vanguard</p>
+          <h1>{t("navAdmin")}</h1>
         </div>
-      </div>
+      </header>
 
       {!isLoaded ? <p>{t("loading")}</p> : null}
 
       {isLoaded && !isSignedIn ? (
         <p className="admin-message">
-          {t("signInToAdd")} <Link to="/hyr">{t("navLogin")}</Link>
+          {t("signInToAdd")} <Link to="/anmelden">{t("navLogin")}</Link>
         </p>
       ) : null}
 
@@ -409,7 +373,12 @@ export default function AdminPage() {
 
           <div className="admin-panel">
             <div className="admin-panel-head">
-              <h2>{titles[section]}</h2>
+              <h2>
+                {titles[section]}
+                {section === "properties" ? (
+                  <span className="admin-count">{items.length}</span>
+                ) : null}
+              </h2>
               {section === "properties" ? (
                 <button type="button" className="admin-add" onClick={startAdd}>
                   {t("addNew")}
@@ -575,20 +544,19 @@ export default function AdminPage() {
                   {items.map((property) => (
                     <div key={property.id}>
                       <PropertiesCard property={property} />
-                      {property.images?.length > 1 ? (
-                        <div className="admin-photo-strip">
-                          {property.images.map((url) => (
-                            <img key={url} src={url} alt="" />
-                          ))}
-                        </div>
-                      ) : null}
+                     
                       <p className="admin-status">
-                        {statusLabel[property.status] || property.status}
-                        {" · "}
-                        {property.visibility === "private" ? t("visibilityPrivate") : t("visibilityPublic")}
+                        <span className={`pill pill-${property.status}`}>
+                          {statusLabel[property.status] || property.status}
+                        </span>
+                        <span className="pill pill-vis">
+                          {property.visibility === "private"
+                            ? t("visibilityPrivate")
+                            : t("visibilityPublic")}
+                        </span>
                       </p>
                       <div className="admin-card-actions">
-                        <button type="button" onClick={() => startEdit(property)}>
+                        <button type="button" className="ghost" onClick={() => startEdit(property)}>
                           {t("editProperty")}
                         </button>
                         <button type="button" className="danger" onClick={() => handleDelete(property.id)}>
@@ -679,6 +647,7 @@ export default function AdminPage() {
 
             {section === "messages" ? <SupportChat embedded /> : null}
 
+            {/*
             {section === "issues" ? (
               issues.length ? (
                 <table className="admin-table">
@@ -715,6 +684,7 @@ export default function AdminPage() {
                 <p className="admin-message">{t("adminEmpty")}</p>
               )
             ) : null}
+            */}
           </div>
         </div>
       ) : null}

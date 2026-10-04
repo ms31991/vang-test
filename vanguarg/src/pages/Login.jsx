@@ -15,7 +15,7 @@ export default function Login() {
   usePageSeo({
     title: "Anmelden | Vanguard",
     description: "Anmeldung bei Vanguard.",
-    path: "/hyr",
+    path: "/anmelden",
     noindex: true,
   });
 
@@ -23,8 +23,8 @@ export default function Login() {
     <section className="auth-page">
       <SignIn
         routing="path"
-        path="/hyr"
-        signUpUrl={`/regjistrohu?redirect_url=${encodeURIComponent(next)}`}
+        path="/anmelden"
+        signUpUrl={`/registrieren?redirect_url=${encodeURIComponent(next)}`}
         fallbackRedirectUrl={next}
         forceRedirectUrl={next}
       />

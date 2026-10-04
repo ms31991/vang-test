@@ -3,7 +3,7 @@ import { getPool } from "./db.js";
 
 const router = Router();
 
-const STATIC_PATHS = ["/", "/pronat", "/rreth-nesh", "/datenschutz", "/agb", "/cookies", "/impressum"];
+const STATIC_PATHS = ["/", "/immobilien", "/ueber-uns", "/datenschutz", "/agb", "/cookies", "/impressum"];
 
 function origin(req) {
   const configured = process.env.PUBLIC_SITE_URL || process.env.VITE_SITE_URL;
@@ -25,9 +25,9 @@ router.get("/robots.txt", (req, res) => {
   const site = origin(req);
   res.type("text/plain").send(`User-agent: *
 Allow: /
-Disallow: /admin
-Disallow: /hyr
-Disallow: /regjistrohu
+Disallow: /verwaltung
+Disallow: /anmelden
+Disallow: /registrieren
 
 Sitemap: ${site}/sitemap.xml
 `);
@@ -42,7 +42,7 @@ router.get("/sitemap.xml", async (req, res) => {
     const urls = [
       ...STATIC_PATHS.map((loc) => ({ loc, lastmod: "" })),
       ...rows.recordset.map((row) => ({
-        loc: `/pronat/${row.Id}`,
+        loc: `/immobilien/${row.Id}`,
         lastmod: row.CreatedAt ? new Date(row.CreatedAt).toISOString().slice(0, 10) : "",
       })),
     ];

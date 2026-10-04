@@ -15,7 +15,7 @@ export default function Register() {
   usePageSeo({
     title: "Registrieren | Vanguard",
     description: "Registrierung bei Vanguard.",
-    path: "/regjistrohu",
+    path: "/registrieren",
     noindex: true,
   });
 
@@ -23,8 +23,8 @@ export default function Register() {
     <section className="auth-page">
       <SignUp
         routing="path"
-        path="/regjistrohu"
-        signInUrl={`/hyr?redirect_url=${encodeURIComponent(next)}`}
+        path="/registrieren"
+        signInUrl={`/anmelden?redirect_url=${encodeURIComponent(next)}`}
         fallbackRedirectUrl={next}
         forceRedirectUrl={next}
       />

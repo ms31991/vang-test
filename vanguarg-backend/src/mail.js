@@ -1,9 +1,7 @@
 import nodemailer from "nodemailer";
-import MailComposer from "nodemailer/lib/mail-composer/index.js";
-import { ImapFlow } from "imapflow";
 import sql from "mssql/msnodesqlv8.js";
 import { getPool } from "./db.js";
-import { alreadyMailedWhileAway, clearMailedWhileAway, isChatOpen, markMailedWhileAway } from "./presence.js";
+import { isChatOpen } from "./presence.js";
 
 const ADMIN = "mehmetalishabani04@gmail.com";
 
@@ -27,27 +25,22 @@ function addressOnly(value) {
   return (match ? match[1] : raw).trim().toLowerCase();
 }
 
-async function deliverToOwnInbox(message) {
-  const user = process.env.SMTP_USER || ADMIN;
-  const client = new ImapFlow({
-    host: "imap.gmail.com",
-    port: 993,
-    secure: true,
-    auth: { user, pass: process.env.SMTP_PASS },
-    logger: false,
-  });
-  await client.connect();
-  try {
-    const raw = await new MailComposer(message).compile().build();
-    await client.append("INBOX", raw, []);
-  } finally {
-    await client.logout();
-  }
+function mailbox() {
+  return addressOnly(process.env.SMTP_USER || ADMIN);
+}
+
+function deliverableAddress(to) {
+  const target = addressOnly(to);
+  const ours = mailbox();
+  if (!target || target !== ours) return target;
+  const at = ours.indexOf("@");
+  if (at <= 0) return target;
+  return `${ours.slice(0, at)}+chat${ours.slice(at)}`;
 }
 
 function siteInbox() {
   const origin = String(process.env.PUBLIC_SITE_URL || "http://localhost:5173").replace(/\/$/, "");
-  return `${origin}/inbox`;
+  return `${origin}/posteingang`;
 }
 
 function escapeHtml(value) {
@@ -100,57 +93,56 @@ export async function notifyChatMessage({ senderId, receiverId, staff, body }) {
     console.warn("Email i chatit u kapërcye: SMTP_PASS mungon në .env.");
     return;
   }
-  if (isChatOpen(receiverId) || alreadyMailedWhileAway(receiverId)) return;
-  markMailedWhileAway(receiverId);
+  if (isChatOpen(receiverId)) {
+    console.log("Email i chatit u kapërcye: marrësi e ka dritaren e chatit hapur.");
+    return;
+  }
 
   const people = await getPool().request()
     .input("s", sql.Int, senderId)
     .input("r", sql.Int, receiverId)
-    .query("SELECT Id, FullName, Email FROM dbo.Users WHERE Id = @s OR Id = @r");
-  const sender = people.recordset.find((row) => row.Id === senderId);
-  const receiver = people.recordset.find((row) => row.Id === receiverId);
+    .query("SELECT Id, FullName, Email, Role FROM dbo.Users WHERE Id = @s OR Id = @r");
+  const sender = people.recordset.find((row) => Number(row.Id) === Number(senderId));
+  const receiver = people.recordset.find((row) => Number(row.Id) === Number(receiverId));
   const who = (sender?.FullName && String(sender.FullName).trim())
     || (sender?.Email && String(sender.Email).trim())
     || "Dikush";
   const preview = String(body || "").trim().slice(0, 500);
   const link = siteInbox();
-  const to = staff
-    ? String(receiver?.Email || "").trim()
-    : (process.env.SMTP_ADMIN || ADMIN);
+  const receiverMail = String(receiver?.Email || "").trim();
+  const adminMail = String(process.env.SMTP_ADMIN || ADMIN).trim();
+  const toReceiver = staff || receiver?.Role === "client";
+  const to = toReceiver ? receiverMail : (receiverMail || adminMail);
   if (!to.includes("@")) {
-    clearMailedWhileAway(receiverId);
     console.warn("Email i chatit u kapërcye: marrësi nuk ka adresë.");
     return;
   }
 
-  const copy = staff
+  const copy = toReceiver
     ? {
         subject: "Vanguard hat geantwortet",
         kicker: "Chat",
-        title: "Der Inhaber hat geantwortet",
-        lead: "Du hast eine Antwort erhalten, während der Chat geschlossen war.",
+        title: `${who} hat dir geschrieben`,
+        lead: "Du hast eine neue Nachricht erhalten.",
         button: "Chat öffnen",
       }
     : {
         subject: "Dikush të ka shkruar në Vanguard",
         kicker: "Inbox",
-        title: "Dikush të ka shkruar",
-        lead: `${who} të dërgoi një mesazh ndërsa inbox ishte i mbyllur.`,
+        title: `${who} të ka shkruar`,
+        lead: "Ke një mesazh të ri.",
         button: "Hap inbox",
       };
 
-  const message = {
-    from: process.env.SMTP_FROM || `Vanguard <${process.env.SMTP_USER || ADMIN}>`,
-    to,
-    replyTo: sender?.Email || undefined,
+  const from = process.env.SMTP_FROM || `Vanguard <${mailbox()}>`;
+  await transport().sendMail({
+    from,
+    to: deliverableAddress(to),
+    envelope: { from: mailbox(), to: deliverableAddress(to) },
+    replyTo: addressOnly(sender?.Email).includes("@") ? sender.Email : undefined,
     subject: copy.subject,
     text: `${copy.title}\n\n${copy.lead}\n\n${preview}\n\n${copy.button}: ${link}`,
     html: emailHtml({ ...copy, preview, link }),
-  };
-  const ownInbox = addressOnly(to) === addressOnly(process.env.SMTP_USER || ADMIN);
-  const send = ownInbox ? deliverToOwnInbox(message) : transport().sendMail(message);
-  await send.catch((err) => {
-    clearMailedWhileAway(receiverId);
-    throw err;
   });
+  console.log(`Email i chatit u dërgua nga ${mailbox()}.`);
 }

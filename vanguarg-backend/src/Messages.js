@@ -3,19 +3,23 @@ import sql from "mssql/msnodesqlv8.js";
 import { getPool } from "./db.js";
 import { requireUser } from "./Auth.js";
 import { notifyChatMessage } from "./mail.js";
-import { markChatClosed, markChatOpen } from "./presence.js";
+import { notePresence } from "./presence.js";
 
 const router = Router();
 router.use(requireUser);
 
 router.post("/presence", (req, res) => {
-  if (req.body?.open === false) markChatClosed(req.user.id);
-  else markChatOpen(req.user.id);
+  notePresence(req.user.id, req.body?.open !== false, req.body?.at);
   res.json({ ok: true });
 });
 
 function isStaff(user) {
   return user.role === "admin" || user.role === "owner";
+}
+
+function userId(value) {
+  const id = Number(value);
+  return Number.isInteger(id) && id > 0 ? id : 0;
 }
 
 function displayName(row) {
@@ -41,7 +45,7 @@ router.get("/conversations", async (req, res, next) => {
       if (!support) return res.status(500).json({ error: "Nuk ka support." });
       const last = await pool.request()
         .input("me", sql.Int, req.user.id)
-        .input("support", sql.Int, support.Id)
+        .input("support", sql.Int, userId(support.Id))
         .query(`
           SELECT TOP 1 Body, SentAt
           FROM dbo.Messages
@@ -50,14 +54,14 @@ router.get("/conversations", async (req, res, next) => {
           ORDER BY SentAt DESC, Id DESC`);
       const unread = await pool.request()
         .input("me", sql.Int, req.user.id)
-        .input("support", sql.Int, support.Id)
+        .input("support", sql.Int, userId(support.Id))
         .query(`
           SELECT COUNT(*) AS Unread
           FROM dbo.Messages
           WHERE SenderId = @support AND ReceiverId = @me AND IsRead = 0`);
       const latest = last.recordset[0];
       return res.json([{
-        id: support.Id,
+        id: userId(support.Id),
         name: "Support",
         lastBody: latest?.Body || null,
         lastAt: latest?.SentAt || null,
@@ -94,7 +98,7 @@ router.get("/conversations", async (req, res, next) => {
         ORDER BY lastMsg.SentAt DESC`);
 
     res.json(r.recordset.map((row) => ({
-      id: row.Id,
+      id: userId(row.Id),
       name: displayName(row),
       email: row.Email || null,
       lastBody: row.LastBody,
@@ -110,12 +114,13 @@ router.get("/with/:userId", async (req, res, next) => {
     const support = await supportAccount(pool);
     if (!support) return res.status(500).json({ error: "Nuk ka support." });
 
-    let otherId = Number(req.params.userId);
+    const supportId = userId(support.Id);
+    let otherId = userId(req.params.userId);
     if (!isStaff(req.user)) {
-      if (otherId !== support.Id) return res.status(403).json({ error: "Nuk ke leje." });
-      otherId = support.Id;
+      if (otherId !== supportId) return res.status(403).json({ error: "Nuk ke leje." });
+      otherId = supportId;
     }
-    if (!otherId || otherId === req.user.id) {
+    if (!otherId || otherId === userId(req.user.id)) {
       return res.status(400).json({ error: "Biseda nuk është e vlefshme." });
     }
 
@@ -151,7 +156,7 @@ router.get("/with/:userId", async (req, res, next) => {
       messages: r.recordset.map((row) => ({
         id: row.Id,
         body: row.Body,
-        mine: row.SenderId === req.user.id,
+        mine: userId(row.SenderId) === userId(req.user.id),
         sentAt: row.SentAt,
       })),
     });
@@ -183,14 +188,14 @@ router.post("/", async (req, res, next) => {
     let receiver;
 
     if (isStaff(req.user)) {
-      receiver = Number(req.body?.toUserId);
+      receiver = userId(req.body?.toUserId);
       if (!receiver) return res.status(400).json({ error: "Zgjidh marrësin." });
     } else {
       const support = await supportAccount(pool);
-      receiver = support?.Id;
+      receiver = userId(support?.Id);
     }
 
-    if (!receiver || receiver === req.user.id) {
+    if (!receiver || receiver === userId(req.user.id)) {
       return res.status(400).json({ error: "Marrësi nuk është i vlefshëm." });
     }
 

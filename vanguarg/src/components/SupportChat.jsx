@@ -69,6 +69,7 @@ export default function SupportChat({ embedded = false }) {
     let stopped = false;
 
     async function beat(open) {
+      const at = Date.now();
       try {
         const token = await getToken();
         if (!token || (stopped && open)) return;
@@ -78,7 +79,7 @@ export default function SupportChat({ embedded = false }) {
             Authorization: `Bearer ${token}`,
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ open }),
+          body: JSON.stringify({ open, at }),
           keepalive: true,
         });
       } catch {
@@ -86,14 +87,11 @@ export default function SupportChat({ embedded = false }) {
       }
     }
 
-    const sync = () => beat(document.visibilityState === "visible");
-    sync();
-    const timer = window.setInterval(sync, 8000);
-    document.addEventListener("visibilitychange", sync);
+    beat(true);
+    const timer = window.setInterval(() => beat(true), 8000);
     return () => {
       stopped = true;
       window.clearInterval(timer);
-      document.removeEventListener("visibilitychange", sync);
       beat(false);
     };
   }, [isSignedIn, getToken]);
@@ -276,7 +274,7 @@ export default function SupportChat({ embedded = false }) {
         <div className="chat-gate">
           <h1>{t("navSupport")}</h1>
           <p>{t("chatLogin")}</p>
-          <Link to={`/hyr?redirect_url=${encodeURIComponent(`/inbox${location.search}`)}`}>{t("navLogin")}</Link>
+          <Link to={`/anmelden?redirect_url=${encodeURIComponent(`/posteingang${location.search}`)}`}>{t("navLogin")}</Link>
         </div>
       </section>
     );

@@ -33,7 +33,7 @@ export async function requireUser(req, res, next) {
     }
     const row = r.recordset[0];
     req.user = {
-      id: row.Id,
+      id: Number(row.Id),
       role: row.Role,
       name: row.FullName || null,
       email: row.Email || null,

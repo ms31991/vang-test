@@ -13,36 +13,36 @@ export default function Footer() {
     {
       title: t("footerBuy"),
       links: [
-        { label: t("categorySale"), to: "/pronat#verkauf" },
-        { label: t("footerAll"), to: "/pronat" },
+        { label: t("categorySale"), to: "/immobilien#verkauf" },
+        { label: t("footerAll"), to: "/immobilien" },
         { label: t("footerSearch"), to: "/#suche" },
       ],
     },
     {
       title: t("footerRent"),
       links: [
-        { label: t("categoryRent"), to: "/pronat#miete" },
-        { label: t("footerAll"), to: "/pronat" },
+        { label: t("categoryRent"), to: "/immobilien#miete" },
+        { label: t("footerAll"), to: "/immobilien" },
       ],
     },
     {
       title: t("footerReno"),
       links: [
-        { label: t("seoLaminate"), to: "/#trade-seoLaminate" },
-        { label: t("seoParquet"), to: "/#trade-seoParquet" },
-        { label: t("seoElectric"), to: "/#trade-seoElectric" },
-        { label: t("seoPlumbing"), to: "/#trade-seoPlumbing" },
-        { label: t("seoBath"), to: "/#trade-seoBath" },
+        { label: t("seoLaminate"), to: "/ueber-uns#trade-seoLaminate" },
+        { label: t("seoParquet"), to: "/ueber-uns#trade-seoParquet" },
+        { label: t("seoElectric"), to: "/ueber-uns#trade-seoElectric" },
+        { label: t("seoPlumbing"), to: "/ueber-uns#trade-seoPlumbing" },
+        { label: t("seoBath"), to: "/ueber-uns#trade-seoBath" },
       ],
     },
     {
       title: t("footerCompany"),
       links: [
-        { label: t("navAbout"), to: "/rreth-nesh" },
+        { label: t("navAbout"), to: "/ueber-uns" },
         { label: t("servicesTitle"), to: "/#leistungen" },
         { label: t("footerContact"), to: "/#kontakt" },
-        { label: t("navLogin"), to: "/hyr" },
-        { label: t("navRegister"), to: "/regjistrohu" },
+        { label: t("navLogin"), to: "/anmelden" },
+        { label: t("navRegister"), to: "/registrieren" },
       ],
     },
     {

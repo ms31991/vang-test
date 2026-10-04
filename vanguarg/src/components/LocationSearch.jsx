@@ -1,19 +1,24 @@
 import { useId, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { placeLabel, swissPlaces } from "../data/places";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { findPlace, placeLabel, swissPlaces } from "../data/places";
 import { useLanguage } from "../i18n/LanguageContext";
 import "./LocationSearch.css";
 
 const RADIUS = [5, 10, 25, 50];
 
-export default function LocationSearch() {
+export default function LocationSearch({ page = false }) {
   const nav = useNavigate();
+  const [params] = useSearchParams();
   const { lang, t } = useLanguage();
   const id = useId();
-  const [q, setQ] = useState("");
+  const fromUrl = findPlace(params.get("ort") || "");
+  const [q, setQ] = useState(() => (fromUrl ? placeLabel(fromUrl, lang) : params.get("ort") || ""));
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
-  const [km, setKm] = useState(10);
+  const [km, setKm] = useState(() => {
+    const value = Number(params.get("radius"));
+    return RADIUS.includes(value) ? value : 10;
+  });
   const [geoMsg, setGeoMsg] = useState("");
 
   const matches = useMemo(() => {
@@ -31,7 +36,7 @@ export default function LocationSearch() {
     const params = new URLSearchParams({ radius: String(km) });
     if (placeId) params.set("ort", placeId);
     else if (typed.trim()) params.set("ort", typed.trim());
-    nav(`/pronat?${params}`);
+    nav(`/immobilien?${params}`);
   }
 
   function pick(place) {
@@ -71,14 +76,14 @@ export default function LocationSearch() {
           lat: position.coords.latitude.toFixed(5),
           lng: position.coords.longitude.toFixed(5),
         });
-        nav(`/pronat?${params}`);
+        nav(`/immobilien?${params}`);
       },
       () => setGeoMsg(t("locGeoDenied")),
     );
   }
 
   return (
-    <section className="loc" id="suche" aria-label={t("locAria")}>
+    <section className={`loc${page ? " is-page" : ""}`} id="suche" aria-label={t("locAria")}>
       <div className="loc-main">
         <span className="loc-pin" aria-hidden="true" />
         <div className="loc-field">

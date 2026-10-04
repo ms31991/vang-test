@@ -37,13 +37,13 @@ export default function Navbar() {
   const [isAdminUser, setIsAdminUser] = useState(false);
   const desktopLinks = [
     { to: "/", label: t("navHome"), end: true },
-    { to: "/pronat", label: t("navProperties") },
+    { to: "/immobilien", label: t("navProperties") },
     { to: "/#leistungen", label: t("navServices"), service: true },
-    { to: "/rreth-nesh", label: t("navAbout") },
+    { to: "/ueber-uns", label: t("navAbout") },
     ...(isSignedIn
-      ? [{ to: "/inbox", label: isAdminUser ? t("navInbox") : t("navSupport") }]
+      ? [{ to: "/posteingang", label: isAdminUser ? t("navInbox") : t("navSupport") }]
       : []),
-    ...(isAdminUser ? [{ to: "/admin", label: t("navAdmin") }] : []),
+    ...(isAdminUser ? [{ to: "/verwaltung", label: t("navAdmin") }] : []),
   ];
   const [isMobile, setIsMobile] = useState(
     () =>
@@ -53,16 +53,16 @@ export default function Navbar() {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   const isHome = location.pathname === "/";
-  const isProperties = location.pathname.startsWith("/pronat");
-  const isAbout = location.pathname.startsWith("/rreth-nesh");
+  const isProperties = location.pathname.startsWith("/immobilien");
+  const isAbout = location.pathname.startsWith("/ueber-uns");
   const isServices = location.pathname === "/" && location.hash === "#leistungen";
-  const isInbox = location.pathname.startsWith("/inbox");
-  const isAdmin = location.pathname.startsWith("/admin");
+  const isInbox = location.pathname.startsWith("/posteingang");
+  const isAdmin = location.pathname.startsWith("/verwaltung");
   const isAccount =
-    location.pathname === "/hyr" ||
-    location.pathname.startsWith("/hyr/") ||
-    location.pathname === "/regjistrohu" ||
-    location.pathname.startsWith("/regjistrohu/");
+    location.pathname === "/anmelden" ||
+    location.pathname.startsWith("/anmelden/") ||
+    location.pathname === "/registrieren" ||
+    location.pathname.startsWith("/registrieren/");
 
   useEffect(() => {
     if (!isLoaded || !isSignedIn) {
@@ -128,7 +128,7 @@ export default function Navbar() {
             <NavLink to="/" className="navbar-logo" end aria-label="Vanguard">
               <Logo />
             </NavLink>
-            <nav className="navbar-links" aria-label="Main">
+            <nav className="navbar-links" aria-label={t("navMain")}>
               {desktopLinks.map((link) => {
                 const active = link.service
                   ? isServices
@@ -155,10 +155,10 @@ export default function Navbar() {
                 </button>
               ) : (
                 <>
-                  <NavLink to="/hyr" className="login-link">
+                  <NavLink to="/anmelden" className="login-link">
                     {t("navLogin")}
                   </NavLink>
-                  <NavLink to="/regjistrohu" className="register-link">
+                  <NavLink to="/registrieren" className="register-link">
                     {t("navRegister")}
                   </NavLink>
                 </>
@@ -177,7 +177,7 @@ export default function Navbar() {
       {isMobile && (
         <nav
           className={`mobile-bottom-nav${keyboardOpen ? " mobile-bottom-nav--hidden" : ""}`}
-          aria-label="Mobile navigation"
+          aria-label={t("navMobile")}
           aria-hidden={keyboardOpen}
         >
           <NavLink
@@ -193,7 +193,7 @@ export default function Navbar() {
           </NavLink>
 
           <NavLink
-            to="/pronat"
+            to="/immobilien"
             className={() => `mobile-nav-item${isProperties ? " active" : ""}`}
           >
             <svg className="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -205,7 +205,7 @@ export default function Navbar() {
 
           {isAdminUser ? (
             <NavLink
-              to="/admin"
+              to="/verwaltung"
               className={() => `mobile-nav-center${isAdmin ? " active" : ""}`}
               aria-label={t("navAdmin")}
             >
@@ -230,7 +230,7 @@ export default function Navbar() {
 
           {isSignedIn ? (
             <NavLink
-              to="/inbox"
+              to="/posteingang"
               className={() => `mobile-nav-item${isInbox ? " active" : ""}`}
             >
               <svg className="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -241,7 +241,7 @@ export default function Navbar() {
             </NavLink>
           ) : (
             <NavLink
-              to="/rreth-nesh"
+              to="/ueber-uns"
               className={() => `mobile-nav-item${isAbout ? " active" : ""}`}
             >
               <svg className="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -264,7 +264,7 @@ export default function Navbar() {
             </button>
           ) : (
             <NavLink
-              to="/hyr"
+              to="/anmelden"
               className={() => `mobile-nav-item${isAccount ? " active" : ""}`}
             >
               <svg className="mobile-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

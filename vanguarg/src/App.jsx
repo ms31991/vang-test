@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { ClerkProvider } from "@clerk/react";
-import { BrowserRouter, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useNavigate, useParams } from "react-router-dom";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import { CookieConsentProvider } from "./consent/CookieConsent";
@@ -13,6 +13,7 @@ import LegalPage from "./pages/LegalPage";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import AdminPage from "./pages/AdminPage";
+import PropertyEditPage from "./pages/PropertyEditPage";
 import "./App.css";
 
 const clerkAppearance = {
@@ -21,14 +22,25 @@ const clerkAppearance = {
   },
 };
 
+function RedirectKeep({ to }) {
+  const { search, hash } = useLocation();
+  return <Navigate to={`${to}${search}${hash}`} replace />;
+}
+
+function RedirectProperty() {
+  const { id } = useParams();
+  const { search, hash } = useLocation();
+  return <Navigate to={`/immobilien/${id}${search}${hash}`} replace />;
+}
+
 function ClerkRoutes() {
   const navigate = useNavigate();
 
   return (
     <ClerkProvider
       publishableKey={import.meta.env.VITE_CLERK_PUBLISHABLE_KEY}
-      signInUrl="/hyr"
-      signUpUrl="/regjistrohu"
+      signInUrl="/anmelden"
+      signUpUrl="/registrieren"
       signInFallbackRedirectUrl="/"
       signUpFallbackRedirectUrl="/"
       routerPush={(to) => navigate(to)}
@@ -40,17 +52,28 @@ function ClerkRoutes() {
         <main>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/pronat" element={<Properties />} />
-            <Route path="/pronat/:id" element={<PropertyDetails />} />
-            <Route path="/rreth-nesh" element={<AboutUs />} />
-            <Route path="/inbox" element={<Inbox />} />
+            <Route path="/immobilien" element={<Properties />} />
+            <Route path="/immobilien/:id" element={<PropertyDetails />} />
+            <Route path="/ueber-uns" element={<AboutUs />} />
+            <Route path="/posteingang" element={<Inbox />} />
             <Route path="/datenschutz" element={<LegalPage page="datenschutz" />} />
             <Route path="/agb" element={<LegalPage page="agb" />} />
             <Route path="/cookies" element={<LegalPage page="cookies" />} />
             <Route path="/impressum" element={<LegalPage page="impressum" />} />
-            <Route path="/hyr/*" element={<Login />} />
-            <Route path="/regjistrohu/*" element={<Register />} />
-            <Route path="/admin" element={<AdminPage />} />
+            <Route path="/anmelden/*" element={<Login />} />
+            <Route path="/registrieren/*" element={<Register />} />
+
+            <Route path="/verwaltung" element={<AdminPage />} />
+            <Route path="/verwaltung/neu" element={<PropertyEditPage />} />
+            <Route path="/verwaltung/bearbeiten/:id" element={<PropertyEditPage />} />
+
+            <Route path="/pronat/:id" element={<RedirectProperty />} />
+            <Route path="/pronat" element={<RedirectKeep to="/immobilien" />} />
+            <Route path="/rreth-nesh" element={<RedirectKeep to="/ueber-uns" />} />
+            <Route path="/inbox" element={<RedirectKeep to="/posteingang" />} />
+            <Route path="/hyr/*" element={<RedirectKeep to="/anmelden" />} />
+            <Route path="/regjistrohu/*" element={<RedirectKeep to="/registrieren" />} />
+            <Route path="/admin" element={<RedirectKeep to="/verwaltung" />} />
           </Routes>
         </main>
         <Footer />

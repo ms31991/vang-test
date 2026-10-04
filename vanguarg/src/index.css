@@ -16,6 +16,10 @@
   box-sizing: border-box;
 }
 
+html {
+  overscroll-behavior: none;
+}
+
 body {
   margin: 0;
 }
@@ -29,8 +33,7 @@ body {
 #kontakt,
 #verkauf,
 #miete,
-#vanguard-seo,
-.home-seo-trades li {
+.about-trades li {
   scroll-margin-top: 112px;
 }
 

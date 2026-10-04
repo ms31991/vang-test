@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
 import { formatPrice, localized } from "../data/properties";
 import { useLanguage } from "../i18n/LanguageContext";
@@ -30,12 +30,16 @@ function mapSrc(lat, lng) {
 
 export default function PropertyDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { lang, t } = useLanguage();
   const [item, setItem] = useState(null);
   const [status, setStatus] = useState("loading");
+  const [photoIndex, setPhotoIndex] = useState(0);
+  const [askMaps, setAskMaps] = useState(false);
 
   useEffect(() => {
     setStatus("loading");
+    setPhotoIndex(0);
     api(`/api/properties/${id}`)
       .then((row) => {
         setItem(row);
@@ -48,9 +52,10 @@ export default function PropertyDetails() {
     ? [item.Neighborhood, item.City].filter(Boolean).join(" – ") || item.Address
     : "";
   const listing = item?.ListingType === "rent" ? "listingRent" : "listingSale";
+  const intent = item?.ListingType === "rent" ? "intentRent" : "intentBuy";
   const lat = item?.Lat == null ? null : Number(item?.Lat);
   const lng = item?.Lng == null ? null : Number(item?.Lng);
-  const hasPoint = lat != null && lng != null && !Number.isNaN(lat) && !Number.isNaN(lng);
+  const hasPoint = lat >= 45 && lat <= 48.5 && lng >= 5 && lng <= 11.5;
   const photos = item?.images || [];
   const rooms = (item?.rooms || []).filter((room) => room.Quantity > 0);
   const title = item
@@ -63,7 +68,7 @@ export default function PropertyDetails() {
   usePageSeo({
     title: item ? `${title} | Vanguard` : `${t("propertiesTitle")} | Vanguard`,
     description: detailDescription,
-    path: `/pronat/${id}`,
+    path: `/immobilien/${id}`,
     image: photos[0]?.Url,
     noindex: status !== "ready",
     jsonLd: item
@@ -85,9 +90,21 @@ export default function PropertyDetails() {
       : null,
   });
 
+  function goBack() {
+    if (window.history.state?.idx > 0) navigate(-1);
+    else navigate("/immobilien");
+  }
+
+  const backButton = (
+    <button type="button" className="detail-back" onClick={goBack}>
+      {t("goBack")}
+    </button>
+  );
+
   if (status === "loading") {
     return (
-      <section className="section">
+      <section className="section property-details">
+        {backButton}
         <p>{t("loading")}</p>
       </section>
     );
@@ -95,8 +112,8 @@ export default function PropertyDetails() {
 
   if (status === "error" || !item) {
     return (
-      <section className="section">
-        <Link to="/pronat">{t("backToProperties")}</Link>
+      <section className="section property-details">
+        {backButton}
         <p className="properties-empty">{t("locNoResults")}</p>
       </section>
     );
@@ -104,27 +121,47 @@ export default function PropertyDetails() {
 
   return (
     <section className="section property-details">
-      <nav className="detail-crumbs" aria-label="Breadcrumb">
-        <Link to="/">{t("navHome")}</Link>
-        <Link to="/pronat">{t("navProperties")}</Link>
-        <span>{title}</span>
-      </nav>
-      {photos.length ? (
-        <div className="detail-photos">
-          {photos.map((photo, index) => (
-            <img key={photo.Id} src={photo.Url} alt={`${title}, ${location}, ${index + 1}`} />
-          ))}
+      {backButton}
+     
+      <div className="detail-stage">
+        <div className="detail-gallery">
+          {photos.length ? (
+            <>
+              <img
+                className="detail-cover"
+                src={photos[photoIndex]?.Url || photos[0].Url}
+                alt={`${title}, ${location}, ${photoIndex + 1}`}
+              />
+              {photos.length > 1 ? (
+                <div className="detail-thumbs">
+                  {photos.map((photo, index) => (
+                    <button
+                      key={photo.Id}
+                      type="button"
+                      className={index === photoIndex ? "is-on" : undefined}
+                      onClick={() => setPhotoIndex(index)}
+                    >
+                      <img src={photo.Url} alt={`${title}, ${location}, ${index + 1}`} />
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <div className="detail-cover detail-cover-empty" />
+          )}
         </div>
-      ) : null}
-      <div className="detail-layout">
-        <div>
-          <p className="property-type">{t(listing)}</p>
-          <p className={`property-status status-${item.Status || "available"}`}>
-            {t(statusLabels[item.Status] || "statusAvailable")}
-          </p>
+        <article className="detail-panel">
+          <p className="detail-intent">{t(intent)}</p>
+          <div className="detail-tags">
+            <p className="property-type">{t(listing)}</p>
+            <p className={`property-status status-${item.Status || "available"}`}>
+              {t(statusLabels[item.Status] || "statusAvailable")}
+            </p>
+          </div>
           <h1>{title}</h1>
-          <p className="property-location">{location}</p>
-          {item.Address ? <p className="property-location">{item.Address}</p> : null}
+          <p className="property-location">{[location, item.Address].filter(Boolean).join(" · ")}</p>
+          <p className="property-price">{formatPrice(item.Price, lang)}</p>
           <dl>
             <div>
               <dt>{t("rooms")}</dt>
@@ -145,24 +182,51 @@ export default function PropertyDetails() {
             </ul>
           ) : null}
           {item.Description ? <p className="detail-description">{item.Description}</p> : null}
-          <p className="property-price">{formatPrice(item.Price, lang)}</p>
-          <Link to={`/inbox?property=${item.Id}`} className="property-message">
-            {t("cardMessage")} · {t(item.ListingType === "rent" ? "intentRent" : "intentBuy")}
+          <Link to={`/posteingang?property=${item.Id}`} className="detail-message">
+            {t("cardMessage")}
           </Link>
-        </div>
-        <div>
-          <h2>{t("mapTitle")}</h2>
-          {hasPoint ? (
+        </article>
+      </div>
+      <div className="detail-map">
+        <h2>{t("mapTitle")}</h2>
+        {hasPoint ? (
+          <div className="map-frame">
             <iframe
               className="property-map"
               title={t("mapTitle")}
               src={mapSrc(lat, lng)}
               loading="lazy"
+              tabIndex={-1}
             />
-          ) : (
-            <p className="properties-empty">{t("mapMissing")}</p>
-          )}
-        </div>
+            <button type="button" className="map-hit" onClick={() => setAskMaps(true)}>
+              {t("mapAsk")}
+            </button>
+            {askMaps ? (
+              <div className="map-ask" onClick={() => setAskMaps(false)}>
+                <div
+                  className="map-ask-card"
+                  role="dialog"
+                  aria-modal="true"
+                  aria-labelledby="map-ask-title"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  <h3 id="map-ask-title">{t("mapAsk")}</h3>
+                  <a href={`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`} target="_blank" rel="noreferrer">
+                    {t("mapGoogle")}
+                  </a>
+                  <a href={`https://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`} target="_blank" rel="noreferrer">
+                    {t("mapApple")}
+                  </a>
+                  <button type="button" onClick={() => setAskMaps(false)}>
+                    {t("mapClose")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        ) : (
+          <p className="properties-empty">{t("mapMissing")}</p>
+        )}
       </div>
     </section>
   );

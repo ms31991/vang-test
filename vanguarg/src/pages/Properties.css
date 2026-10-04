@@ -1,36 +1,212 @@
-.section h1 {
-  margin: 0;
-  font-size: 40px;
-  letter-spacing: -0.04em;
-  color: var(--ink);
+/* ───── Banner kërkimi ───── */
+.properties-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr);
+  gap: 24px 48px;
+  align-items: center;
+  margin-bottom: 0;
+  padding: 44px 48px;
+  border-radius: 20px 20px 0 0;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--ink) 92%, #000), var(--ink)),
+    var(--ink);
+  color: #fff;
 }
 
-.listing-switch {
+.properties-top > * {
+  min-width: 0;
+}
+
+.properties-crumb {
+  margin: 0 0 12px;
+  color: rgb(255 255 255 / 0.6);
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+
+.properties-top h1 {
+  margin: 0;
+  font-size: clamp(30px, 4.5vw, 46px);
+  line-height: 1.08;
+  letter-spacing: -0.04em;
+  color: #fff;
+}
+
+.properties-summary {
   display: inline-flex;
-  gap: 4px;
-  margin: 4px 0 28px;
-  padding: 4px;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 0;
+  color: rgb(255 255 255 / 0.8);
+  font-size: 16px;
+  overflow-wrap: anywhere;
+}
+
+.properties-summary::before {
+  content: "";
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 50% 50% 50% 0;
+  transform: rotate(-45deg);   /* pin vendndodhjeje */
+  background: var(--accent);
+}
+
+.properties-top .loc.is-page {
+  margin: 0;
+  padding: 8px;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 20px 40px -20px rgb(0 0 0 / 0.5);
+}
+
+/* ───── Tab-et Shitje / Qira + numri i rezultateve ───── */
+.listing-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin: 0 0 28px;
+  padding: 0 32px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-top: 0;
+  border-radius: 0 0 20px 20px;
   background: #fff;
 }
 
+.listing-switch {
+  display: flex;
+  gap: 8px;
+}
+
 .listing-switch a {
-  min-width: 108px;
-  padding: 10px 22px;
-  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 18px 16px 16px;
+  border-bottom: 3px solid transparent;
   color: var(--muted);
   font-weight: 700;
-  text-align: center;
   text-decoration: none;
+  white-space: nowrap;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.listing-switch a:hover {
+  color: var(--ink);
 }
 
 .listing-switch a.is-on {
+  color: var(--ink);
+  border-bottom-color: var(--accent);
+}
+
+.listing-switch .count {
+  min-width: 26px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--ink) 8%, #fff);
+  font-size: 12px;
+  text-align: center;
+}
+
+.listing-switch a.is-on .count {
   background: var(--accent);
   color: #fff;
 }
 
+.listing-count {
+  margin: 0;
+  padding-bottom: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.listing-count strong {
+  color: var(--ink);
+  font-size: 16px;
+}
+
+/* ───── Rrjeta e kartave ───── */
+.section .property-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 24px;
+}
+
+/* ───── Gjendje bosh / gabim ───── */
 .properties-empty {
   margin: 8px 0 24px;
+  padding: 40px 24px;
+  border: 1px dashed var(--line);
+  border-radius: 16px;
+  background: #fff;
   color: var(--muted);
+  text-align: center;
+}
+
+/* ───── Rekomandime kur s'ka rezultate ───── */
+.recommend {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.recommend-kicker {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 5px 12px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--accent) 12%, #fff);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.recommend h2 {
+  margin: 0;
+  font-size: clamp(24px, 3.5vw, 32px);
+  letter-spacing: -0.03em;
+  color: var(--ink);
+}
+
+.recommend > p {
+  max-width: 62ch;
+  margin: 8px 0 24px;
+  color: var(--muted);
+}
+
+/* ───── Mobile ───── */
+@media (max-width: 800px) {
+  .properties-top {
+    grid-template-columns: 1fr;
+    padding: 28px 20px;
+    border-radius: 16px 16px 0 0;
+  }
+
+  .listing-bar {
+    padding: 0 12px;
+    border-radius: 0 0 16px 16px;
+  }
+
+  .listing-switch {
+    width: 100%;
+  }
+
+  .listing-switch a {
+    flex: 1;
+    justify-content: center;
+    padding: 16px 8px 14px;
+  }
+
+  .listing-count {
+    padding: 0 8px 14px;
+  }
+
+  .section .property-grid {
+    grid-template-columns: 1fr;
+  }
 }

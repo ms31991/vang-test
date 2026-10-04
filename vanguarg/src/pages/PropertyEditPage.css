@@ -1,0 +1,131 @@
+.section.edit-page {
+  width: min(1040px, calc(100% - 32px));
+}
+
+.edit-back {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 20px;
+  padding: 9px 16px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+.edit-back::before {
+  content: "←";
+  margin-right: 8px;
+}
+
+.edit-back:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ───── Header ───── */
+.edit-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+  margin-bottom: 22px;
+}
+
+.edit-page h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(28px, 4vw, 38px);
+  letter-spacing: -0.04em;
+}
+
+.edit-sub {
+  margin: 6px 0 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+
+.edit-delete {
+  border: 1px solid color-mix(in srgb, #8d3b32 30%, #fff);
+  border-radius: 10px;
+  padding: 11px 18px;
+  background: color-mix(in srgb, #8d3b32 10%, #fff);
+  color: #8d3b32;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.2s;
+}
+
+.edit-delete:hover {
+  filter: brightness(0.96);
+}
+
+/* ───── Forma (përdor stilet e .admin-form nga AdminPage.css) ───── */
+.edit-form {
+  margin-bottom: 40px;
+  padding: 26px;
+  background: #fff;
+  border-radius: 22px;
+}
+
+.edit-heading {
+  grid-column: 1 / -1;
+  margin: 6px 0 -4px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.edit-heading:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* Butonat Ruaj / Anulo mbeten të dukshme gjatë scroll-it */
+.edit-form .admin-actions {
+  position: sticky;
+  bottom: 12px;
+  z-index: 2;
+  margin-top: 8px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 14px 30px -18px rgb(0 0 0 / 0.35);
+}
+
+.edit-form .admin-actions button[type="submit"] {
+  min-width: 160px;
+}
+
+.edit-form .admin-actions button:disabled {
+  cursor: wait;
+  opacity: 0.6;
+}
+
+@media (max-width: 800px) {
+  .edit-form {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+
+  .edit-form .admin-actions {
+    bottom: 8px;
+  }
+
+  .edit-form .admin-actions button {
+    flex: 1;
+  }
+}

@@ -46,10 +46,17 @@ async function geocode(query) {
   return { lat: Number(rows[0].lat), lng: Number(rows[0].lon) };
 }
 
+function savedPoint(lat, lng) {
+  return lat != null && lng != null
+    && !Number.isNaN(lat) && !Number.isNaN(lng)
+    && lat >= 45 && lat <= 48.5
+    && lng >= 5 && lng <= 11.5;
+}
+
 async function resolvePoint(row) {
   const lat = row.Lat == null ? null : Number(row.Lat);
   const lng = row.Lng == null ? null : Number(row.Lng);
-  if (lat != null && lng != null && !Number.isNaN(lat) && !Number.isNaN(lng)) return { lat, lng };
+  if (savedPoint(lat, lng)) return { lat, lng };
 
   if (row.Address) {
     const query = [row.Address, row.Neighborhood, row.City, "Schweiz"].filter(Boolean).join(", ");

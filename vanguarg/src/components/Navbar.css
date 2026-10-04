@@ -109,9 +109,6 @@
     right: 14px;
     z-index: 1200;
   }
-  #root {
-    padding-bottom: calc(108px + env(safe-area-inset-bottom));
-  }
 
   .mobile-bottom-nav {
     display: flex;

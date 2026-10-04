@@ -11,14 +11,14 @@ export default function LanguageSwitcher() {
         aria-pressed={lang === "de"}
         onClick={() => setLang("de")}
       >
-        DE
+        {t("langDe")}
       </button>
       <button
         type="button"
         aria-pressed={lang === "en"}
         onClick={() => setLang("en")}
       >
-        EN
+        {t("langEn")}
       </button>
     </div>
   );

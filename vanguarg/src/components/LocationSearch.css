@@ -10,6 +10,12 @@
   font-family: "Instrument Sans", system-ui, sans-serif;
 }
 
+.loc.is-page {
+  max-width: none;
+  margin: 0 0 28px;
+  padding: 0;
+}
+
 .loc-main {
   display: flex;
   align-items: center;
