@@ -8,7 +8,6 @@ import { clerkMiddleware } from "@clerk/express";
 
 import { connectDb, getPool } from "./db.js";
 import { initDb } from "./initDB.js";
-
 import { requireUser } from "./Auth.js";
 
 import propertiesRouter from "./Properties.js";
