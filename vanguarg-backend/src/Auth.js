@@ -2,6 +2,16 @@ import { clerkClient } from "@clerk/express";
 import { getPool } from "./db.js";
 import { clerkUserIdFromRequest } from "./session.js";
 
+// Email-et që bëhen admin automatikisht kur hyjnë.
+// Mund të shtosh të tjerë edhe te Render: ADMIN_EMAILS=a@gmail.com,b@gmail.com
+const ADMIN_EMAILS = [
+  "mehmetalishabani04@gmail.com",
+  "shabanikelmend399@gmail.com",
+  ...String(process.env.ADMIN_EMAILS || "").split(","),
+]
+  .map((s) => s.trim().toLowerCase())
+  .filter(Boolean);
+
 // Kërkon që përdoruesi të jetë i identifikuar në Clerk.
 // Nëse hyn për herë të parë, e krijon në databazë me rolin 'client'.
 export async function requireUser(req, res, next) {
@@ -33,9 +43,22 @@ export async function requireUser(req, res, next) {
     }
     const row = r.rows[0];
 
-    // PËRKOHËSISHT, vetëm për test: çdo përdorues bëhet admin.
-    // Fike duke fshirë variablën ALL_USERS_ADMIN në Render.
-    if (process.env.ALL_USERS_ADMIN === "true" && row.role !== "admin") {
+    // Nëse email-i mungon në databazë, merre nga Clerk
+    if (!row.email && process.env.CLERK_SECRET_KEY) {
+      const cu = await clerkClient.users.getUser(userId);
+      const email = cu.emailAddresses?.[0]?.emailAddress ?? null;
+      if (email) {
+        await pool.query("UPDATE users SET email = $1 WHERE id = $2", [email, row.id]);
+        row.email = email;
+      }
+    }
+
+    // Promovo në admin nëse email-i është në listë
+    if (
+      row.role !== "admin" &&
+      row.email &&
+      ADMIN_EMAILS.includes(String(row.email).toLowerCase())
+    ) {
       await pool.query("UPDATE users SET role = 'admin' WHERE id = $1", [row.id]);
       row.role = "admin";
     }
