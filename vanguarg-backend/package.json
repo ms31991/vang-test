@@ -3,10 +3,11 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "scripts": {
-    "dev": "node --watch src/index.js",
-    "start": "node src/index.js"
-  },
+ "scripts": {
+  "dev": "node --watch src/index.js",
+  "start": "node src/index.js",
+  "build": "echo no build needed"
+},
   "dependencies": {
     "@clerk/express": "^2.1.73",
     "cors": "^2.8.5",
