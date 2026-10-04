@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import sql from 'mssql';import { getPool } from "./db.js";
+import { getPool } from "./db.js";
 import { isChatOpen } from "./presence.js";
 
 const ADMIN = "mehmetalishabani04@gmail.com";
@@ -104,7 +104,7 @@ export async function notifyChatMessage({ senderId, receiverId, staff, body }) {
   );
   const sender = people.rows.find((row) => Number(row.Id) === Number(senderId));
   const receiver = people.rows.find((row) => Number(row.Id) === Number(receiverId));
-    const who = (sender?.FullName && String(sender.FullName).trim())
+  const who = (sender?.FullName && String(sender.FullName).trim())
     || (sender?.Email && String(sender.Email).trim())
     || "Dikush";
   const preview = String(body || "").trim().slice(0, 500);
