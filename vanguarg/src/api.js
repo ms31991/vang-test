@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3001";
+const API_BASE_URL = "https://vang-test.onrender.com";
 
 export async function api(
   path,
@@ -53,6 +53,7 @@ export function parseRoomCounts(value) {
 export function fromProperty(row) {
   const city = row.City || "";
   const neighborhood = row.Neighborhood || "";
+
   const location = neighborhood
     ? `${city} – ${neighborhood}`
     : city;
