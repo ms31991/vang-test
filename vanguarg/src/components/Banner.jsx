@@ -27,11 +27,7 @@ export default function Banner() {
 
       <div className="facade" aria-hidden="true">
         <div className="embers">
-          <span />
-          <span />
-          <span />
-          <span />
-          <span />
+          
         </div>
         <div className="facade-roof" />
         <div className="facade-grid" style={{ "--cols": COLS }}>
